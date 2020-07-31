@@ -1,8 +1,8 @@
 package io.github.shallowinggg.sqlgen.config;
 
+import io.github.shallowinggg.sqlgen.SqlGenApplication;
 import io.github.shallowinggg.sqlgen.env.ConfigurableEnvironment;
 import io.github.shallowinggg.sqlgen.env.Environment;
-import io.github.shallowinggg.sqlgen.io.ResourceLoader;
 
 /**
  * Allows for customization of the application's {@link Environment} prior to the
@@ -23,7 +23,7 @@ public interface EnvironmentPostProcessor {
     /**
      * Post-process the given {@code environment}.
      * @param environment the environment to post-process
-     * @param resourceLoader the resource loader that application use
+     * @param sqlGenApplication the resource loader that application use
      */
-    void postProcessEnvironment(ConfigurableEnvironment environment, ResourceLoader resourceLoader);
+    void postProcessEnvironment(ConfigurableEnvironment environment, SqlGenApplication sqlGenApplication);
 }

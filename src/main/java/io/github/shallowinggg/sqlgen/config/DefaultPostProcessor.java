@@ -1,11 +1,15 @@
 package io.github.shallowinggg.sqlgen.config;
 
-import io.github.shallowinggg.sqlgen.env.*;
+import io.github.shallowinggg.sqlgen.SqlGenApplication;
+import io.github.shallowinggg.sqlgen.env.ConfigurableEnvironment;
+import io.github.shallowinggg.sqlgen.env.PropertiesPropertySourceLoader;
+import io.github.shallowinggg.sqlgen.env.PropertySource;
+import io.github.shallowinggg.sqlgen.env.PropertySourceLoader;
+import io.github.shallowinggg.sqlgen.env.YamlPropertySourceLoader;
 import io.github.shallowinggg.sqlgen.io.FileSystemResource;
 import io.github.shallowinggg.sqlgen.io.Resource;
 import io.github.shallowinggg.sqlgen.io.ResourceLoader;
 import io.github.shallowinggg.sqlgen.io.support.FactoriesLoader;
-import io.github.shallowinggg.sqlgen.util.ClassUtils;
 import io.github.shallowinggg.sqlgen.util.CollectionUtils;
 import io.github.shallowinggg.sqlgen.util.StringUtils;
 import org.apache.commons.logging.Log;
@@ -13,7 +17,16 @@ import org.apache.commons.logging.LogFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -26,13 +39,10 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
 
     private final Log logger = LogFactory.getLog(getClass());
 
-    private ConfigurableEnvironment environment;
-
     private ResourceLoader resourceLoader;
 
-    private final List<PropertySourceLoader> propertySourceLoaders = new ArrayList<>();
-
-    private final List<PropertiesFinder> propertiesFinders = new ArrayList<>();
+    private final List<PropertySourceLoader> propertySourceLoaders = Arrays.asList(new PropertiesPropertySourceLoader(),
+            new YamlPropertySourceLoader());
 
     private static final String NO_SEARCH_NAME = "";
 
@@ -42,23 +52,10 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
 
     private final Map<DocumentsCacheKey, List<PropertySource<?>>> loadDocumentsCache = new HashMap<>();
 
-    public DefaultPostProcessor() {
-        init();
-    }
-
-    private void init() {
-        propertySourceLoaders.add(new PropertiesPropertySourceLoader());
-        propertySourceLoaders.add(new YamlPropertySourceLoader());
-
-        propertiesFinders.add(new DefaultPropertiesFinder());
-        if (ClassUtils.isPresent("org.springframework.boot.SpringApplication", null)) {
-            propertiesFinders.add(new SpringBootPropertiesFinder());
-        }
-        propertiesFinders.addAll(loadPropertiesFinders());
-    }
 
     @Override
-    public void postProcessEnvironment(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
+    public void postProcessEnvironment(ConfigurableEnvironment environment, SqlGenApplication sqlGenApplication) {
+        this.resourceLoader = sqlGenApplication.getResourceLoader();
         List<PropertiesFinder> propertiesFinders = loadPropertiesFinders();
         for (PropertiesFinder finder : propertiesFinders) {
             if (finder instanceof ConfigurablePropertiesFinder) {
@@ -67,16 +64,35 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
         }
 
         List<String> profiles = initializeProfiles(environment);
-        propertiesFinders.forEach(finder -> {
-            profiles.forEach(profile -> load(profile, finder, environment.getPropertySources()::addLast));
-
-            if(finder.getDbConfigProperties() != null) {
-                finder.getDbConfigProperties().stream().filter(DbConfigProperties::isCandicate)
-                        .forEach(properties -> {
-
-                        });
+        for (PropertiesFinder finder : propertiesFinders) {
+            for (String profile : profiles) {
+                load(profile, finder, environment.getPropertySources()::addLast);
             }
-        });
+
+            if (finder.getDbConfigProperties() != null) {
+                List<DbConfigProperties> candidates = finder.getDbConfigProperties().stream()
+                        .filter(DbConfigProperties::isCandicate).collect(Collectors.toList());
+                for (DbConfigProperties properties : candidates) {
+                    if (resolve(properties, environment, sqlGenApplication)) {
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean resolve(DbConfigProperties properties, ConfigurableEnvironment environment, SqlGenApplication application) {
+        String url = environment.getProperty(properties.getUrlPropertyName());
+        String driverName = environment.getProperty(properties.getDriverNamePropertyName());
+        String username = environment.getProperty(properties.getUsernamePropertyName());
+        String password = environment.getProperty(properties.getPasswordPropertyName());
+
+        DbConfig dbConfig = new DbConfig(url, driverName, username, password);
+        if (dbConfig.isValid()) {
+            application.setDbConfig(dbConfig);
+            return true;
+        }
+        return false;
     }
 
     private List<PropertiesFinder> loadPropertiesFinders() {
@@ -244,6 +260,13 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
             this.loadDocumentsCache.put(cacheKey, documents);
         }
         return documents;
+    }
+
+    private boolean isValid(DbConfigProperties properties) {
+        return StringUtils.hasText(properties.getUrlPropertyName()) &&
+                StringUtils.hasText(properties.getDriverNamePropertyName()) &&
+                StringUtils.hasText(properties.getUsernamePropertyName()) &&
+                StringUtils.hasText(properties.getPasswordPropertyName());
     }
 
     /**
