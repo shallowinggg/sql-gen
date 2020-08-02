@@ -12,7 +12,7 @@ public interface PropertiesFinder {
 
     Set<String> getSearchLocations();
 
-    String getSearchName();
+    Set<String> getSearchNames();
 
     List<DbConfigProperties> getDbConfigProperties();
 

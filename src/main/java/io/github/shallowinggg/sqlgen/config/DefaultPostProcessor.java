@@ -17,7 +17,15 @@ import org.apache.commons.logging.LogFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -30,18 +38,20 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
 
     private final Log logger = LogFactory.getLog(getClass());
 
-    private ResourceLoader resourceLoader;
+    private static final String WILDCARD = "*";
 
-    private final List<PropertySourceLoader> propertySourceLoaders = Arrays.asList(new PropertiesPropertySourceLoader(),
-            new YamlPropertySourceLoader());
-
-    private static final String NO_SEARCH_NAME = "";
+    private static final Set<String> NO_SEARCH_NAMES = Collections.singleton("");
 
     private static final Resource[] EMPTY_RESOURCES = {};
 
     private static final Comparator<File> FILE_COMPARATOR = Comparator.comparing(File::getAbsolutePath);
 
+    private final List<PropertySourceLoader> propertySourceLoaders = Arrays.asList(new PropertiesPropertySourceLoader(),
+            new YamlPropertySourceLoader());
+
     private final Map<DocumentsCacheKey, List<PropertySource<?>>> loadDocumentsCache = new HashMap<>();
+
+    private ResourceLoader resourceLoader;
 
 
     @Override
@@ -49,16 +59,13 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
         this.resourceLoader = sqlGenApplication.getResourceLoader();
         List<PropertiesFinder> propertiesFinders = loadPropertiesFinders();
         for (PropertiesFinder finder : propertiesFinders) {
-            if (finder instanceof ConfigurablePropertiesFinder) {
+            if (finder instanceof EnvironmentAware) {
                 ((EnvironmentAware) finder).setEnvironment(environment);
             }
         }
 
-        List<String> profiles = initializeProfiles(environment);
         for (PropertiesFinder finder : propertiesFinders) {
-            for (String profile : profiles) {
-                load(profile, finder, environment.getPropertySources()::addLast);
-            }
+            load(finder, environment.getPropertySources()::addLast);
 
             if (finder.getDbConfigProperties() != null) {
                 List<DbConfigProperties> candidates = finder.getDbConfigProperties().stream()
@@ -91,29 +98,22 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
                 stream().filter(PropertiesFinder::isCandidate).collect(Collectors.toList());
     }
 
-    private List<String> initializeProfiles(ConfigurableEnvironment environment) {
-        List<String> profiles = new ArrayList<>();
-        Collections.addAll(profiles, environment.getActiveProfiles());
-        if (profiles.isEmpty()) {
-            Collections.addAll(profiles, environment.getDefaultProfiles());
-        }
-        profiles.add(null);
-        return profiles;
-    }
-
-    private void load(String profile, PropertiesFinder finder, PropertySourceConsumer consumer) {
-        finder.getSearchLocations().forEach(location -> {
+    private void load(PropertiesFinder finder, Consumer<PropertySource<?>> consumer) {
+        Set<String> searchLocations = finder.getSearchLocations();
+        for (String location : searchLocations) {
             boolean isFolder = location.endsWith("/");
-            String name = isFolder ? finder.getSearchName() : NO_SEARCH_NAME;
-            load(profile, location, name, consumer);
-        });
+            Set<String> searchNames = isFolder ? finder.getSearchNames() : NO_SEARCH_NAMES;
+            for (String name : searchNames) {
+                load(location, name, consumer);
+            }
+        }
     }
 
-    private void load(String profile, String location, String name, PropertySourceConsumer consumer) {
+    private void load(String location, String name, Consumer<PropertySource<?>> consumer) {
         if (!StringUtils.hasText(name)) {
             for (PropertySourceLoader loader : this.propertySourceLoaders) {
                 if (canLoadFileExtension(loader, location)) {
-                    load(loader, location, consumer);
+                    doLoad(loader, location, consumer);
                     return;
                 }
             }
@@ -125,7 +125,7 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
         for (PropertySourceLoader loader : this.propertySourceLoaders) {
             for (String fileExtension : loader.getFileExtensions()) {
                 if (processed.add(fileExtension)) {
-                    loadForFileExtension(loader, location + name, "." + fileExtension, profile,
+                    loadForFileExtension(loader, location + name, "." + fileExtension,
                             consumer);
                 }
             }
@@ -138,18 +138,12 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
     }
 
 
-    private void loadForFileExtension(PropertySourceLoader loader, String prefix, String extension, String profile,
-                                      PropertySourceConsumer consumer) {
-        String location;
-        if (StringUtils.hasText(profile)) {
-            location = prefix + "-" + profile + extension;
-        } else {
-            location = prefix + extension;
-        }
-        load(loader, location, consumer);
+    private void loadForFileExtension(PropertySourceLoader loader, String prefix, String extension,
+                                      Consumer<PropertySource<?>> consumer) {
+        doLoad(loader, prefix + extension, consumer);
     }
 
-    private void load(PropertySourceLoader loader, String location, PropertySourceConsumer consumer) {
+    private void doLoad(PropertySourceLoader loader, String location, Consumer<PropertySource<?>> consumer) {
         Resource[] resources = getResources(location);
         for (Resource resource : resources) {
             try {
@@ -191,7 +185,7 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
     }
 
     private String getLocationName(String location, Resource resource) {
-        if (!location.contains("*")) {
+        if (!location.contains(WILDCARD)) {
             return location;
         }
         if (resource instanceof FileSystemResource) {
@@ -202,7 +196,7 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
 
     private Resource[] getResources(String location) {
         try {
-            if (location.contains("*")) {
+            if (location.contains(WILDCARD)) {
                 return getResourcesFromPatternLocation(location);
             }
             return new Resource[]{this.resourceLoader.getResource(location)};
@@ -293,8 +287,4 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
 
     }
 
-    private interface PropertySourceConsumer extends Consumer<PropertySource<?>> {
-        @Override
-        void accept(PropertySource<?> propertySource);
-    }
 }
