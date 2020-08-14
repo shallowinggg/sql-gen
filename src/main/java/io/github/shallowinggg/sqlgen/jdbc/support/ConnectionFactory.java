@@ -54,7 +54,7 @@ public class ConnectionFactory {
         return instance;
     }
 
-    public static ConnectionFactory getInstance(DbConfig dbConfig) {
+    public static void init(DbConfig dbConfig) {
         ConnectionFactory cf = instance;
         if(cf == null) {
             synchronized (ConnectionFactory.class) {
@@ -65,7 +65,6 @@ public class ConnectionFactory {
                 }
             }
         }
-        return cf;
     }
 
     /**

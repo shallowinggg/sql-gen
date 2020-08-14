@@ -7,6 +7,10 @@ package io.github.shallowinggg.sqlgen;
  */
 public class SqlGenException extends RuntimeException {
 
+    public SqlGenException(String msg) {
+        super(msg);
+    }
+
     /**
      * Constructs a SqlGenException using the given message and underlying cause.
      *

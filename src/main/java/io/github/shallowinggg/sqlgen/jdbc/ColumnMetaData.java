@@ -47,7 +47,9 @@ public class ColumnMetaData {
         return new ColumnMetaData(name, type, defaultValue, size, nullable, autoIncrement);
     }
 
-
+    public String getName() {
+        return name;
+    }
 
     public boolean isNullable() {
         return nullable;
