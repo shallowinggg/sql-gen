@@ -8,25 +8,19 @@ import io.github.shallowinggg.sqlgen.util.Assert;
 public class ColumnMetaData {
 
     private final String name;
+    private final int sqlType;
     private final String type;
     private final String defaultValue;
     private final int size;
     private final boolean nullable;
     private final boolean autoIncrement;
 
-    public ColumnMetaData(String name, String type) {
-        this(name, type, null, -1);
-    }
-
-    public ColumnMetaData(String name, String type, String defaultValue, int size) {
-        this(name, type, defaultValue, size, false, false);
-    }
-
-    public ColumnMetaData(String name, String type, String defaultValue, int size, boolean nullable, boolean autoIncrement) {
+    public ColumnMetaData(String name, int sqlType, String type, String defaultValue, int size, boolean nullable, boolean autoIncrement) {
         Assert.hasText(name, "name must has text");
         Assert.hasText(type, "type must has text");
 
         this.name = name;
+        this.sqlType = sqlType;
         this.type = type;
         this.defaultValue = defaultValue;
         this.size = size;
@@ -34,17 +28,17 @@ public class ColumnMetaData {
         this.autoIncrement = autoIncrement;
     }
 
-    public static ColumnMetaData make(String name, String type) {
-        return new ColumnMetaData(name, type);
+    public static ColumnMetaData of(String name, int sqlType, String type, String defaultValue, int size, boolean nullable,
+                                    boolean autoIncrement) {
+        return new ColumnMetaData(name, sqlType, type, defaultValue, size, nullable, autoIncrement);
     }
 
-    public static ColumnMetaData make(String name, String type, String defaultValue, int size) {
-        return new ColumnMetaData(name, type, defaultValue, size);
+    public int getSqlType() {
+        return sqlType;
     }
 
-    public static ColumnMetaData make(String name, String type, String defaultValue, int size, boolean nullable,
-                                      boolean autoIncrement) {
-        return new ColumnMetaData(name, type, defaultValue, size, nullable, autoIncrement);
+    public String getDefaultValue() {
+        return defaultValue;
     }
 
     public String getName() {
@@ -57,5 +51,22 @@ public class ColumnMetaData {
 
     public boolean isAutoIncrement() {
         return autoIncrement;
+    }
+
+    public boolean hasDefaultValue() {
+        return !"null".equals(defaultValue);
+    }
+
+    @Override
+    public String toString() {
+        return "ColumnMetaData{" +
+                "name='" + name + '\'' +
+                ", sqlType=" + sqlType +
+                ", type='" + type + '\'' +
+                ", defaultValue='" + defaultValue + '\'' +
+                ", size=" + size +
+                ", nullable=" + nullable +
+                ", autoIncrement=" + autoIncrement +
+                '}';
     }
 }
