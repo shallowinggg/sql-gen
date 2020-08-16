@@ -2,6 +2,7 @@ package io.github.shallowinggg.sqlgen.config;
 
 import io.github.shallowinggg.sqlgen.SqlGenApplication;
 import io.github.shallowinggg.sqlgen.env.ConfigurableEnvironment;
+import io.github.shallowinggg.sqlgen.env.Environment;
 import io.github.shallowinggg.sqlgen.env.PropertiesPropertySourceLoader;
 import io.github.shallowinggg.sqlgen.env.PropertySource;
 import io.github.shallowinggg.sqlgen.env.PropertySourceLoader;
@@ -22,6 +23,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -53,10 +55,13 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
 
     private ResourceLoader resourceLoader;
 
+    private Environment environment;
+
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SqlGenApplication sqlGenApplication) {
         this.resourceLoader = sqlGenApplication.getResourceLoader();
+        this.environment = environment;
         List<PropertiesFinder> propertiesFinders = loadPropertiesFinders();
         for (PropertiesFinder finder : propertiesFinders) {
             if (finder instanceof EnvironmentAware) {
@@ -99,14 +104,21 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
     }
 
     private void load(PropertiesFinder finder, Consumer<PropertySource<?>> consumer) {
-        Set<String> searchLocations = finder.getSearchLocations();
+        List<String> searchLocations = finder.getSearchLocations();
         for (String location : searchLocations) {
             boolean isFolder = location.endsWith("/");
-            Set<String> searchNames = isFolder ? finder.getSearchNames() : NO_SEARCH_NAMES;
+            Set<String> searchNames = isFolder ? asSet(finder.getSearchNames()) : NO_SEARCH_NAMES;
             for (String name : searchNames) {
                 load(location, name, consumer);
             }
         }
+    }
+
+    private Set<String> asSet(List<String> searchNames) {
+        if(CollectionUtils.isNotEmpty(searchNames)) {
+            return new LinkedHashSet<>(searchNames);
+        }
+        return Collections.emptySet();
     }
 
     private void load(String location, String name, Consumer<PropertySource<?>> consumer) {

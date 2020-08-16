@@ -64,6 +64,17 @@ public abstract class CollectionUtils {
     }
 
     /**
+     * Return {@code true} if the supplied Collection is not {@code null} or empty.
+     * Otherwise, return {@code false}.
+     *
+     * @param collection the Collection to check
+     * @return whether the given Collection is not empty
+     */
+    public static boolean isNotEmpty(@Nullable Collection<?> collection) {
+        return !isEmpty(collection);
+    }
+
+    /**
      * Convert the supplied array into a List. A primitive array gets converted
      * into a List of the appropriate wrapper type.
      * <p><b>NOTE:</b> Generally prefer the standard {@link Arrays#asList} method.

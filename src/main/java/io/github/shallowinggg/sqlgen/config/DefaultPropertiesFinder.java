@@ -1,7 +1,6 @@
 package io.github.shallowinggg.sqlgen.config;
 
 import java.util.List;
-import java.util.Set;
 
 /**
  * @author ding shimin
@@ -13,17 +12,12 @@ public class DefaultPropertiesFinder extends AbstractPropertiesFinder {
     }
 
     @Override
-    public String name() {
+    public List<String> getSearchLocations() {
         return null;
     }
 
     @Override
-    public Set<String> getSearchLocations() {
-        return null;
-    }
-
-    @Override
-    public String getSearchName() {
+    public List<String> getSearchNames() {
         return null;
     }
 
