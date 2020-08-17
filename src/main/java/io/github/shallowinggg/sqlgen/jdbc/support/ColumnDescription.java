@@ -54,5 +54,6 @@ public final class ColumnDescription {
      */
     public static final String COLUMN_AUTOINCREMENT = "IS_AUTOINCREMENT";
 
-    private ColumnDescription() {}
+    private ColumnDescription() {
+    }
 }

@@ -618,7 +618,6 @@ public abstract class Assert {
     }
 
 
-
     /**
      * Assert that the provided object is an instance of the provided class.
      * <pre class="code">Assert.instanceOf(Foo.class, foo, "Foo expected");</pre>

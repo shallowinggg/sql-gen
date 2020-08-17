@@ -48,7 +48,7 @@ public class ConnectionFactory {
 
     public static ConnectionFactory getInstance() {
         ConnectionFactory cf = instance;
-        if(cf == null) {
+        if (cf == null) {
             throw new IllegalStateException("ConnectionFactory has not been initialized");
         }
         return instance;
@@ -56,10 +56,10 @@ public class ConnectionFactory {
 
     public static void init(DbConfig dbConfig) {
         ConnectionFactory cf = instance;
-        if(cf == null) {
+        if (cf == null) {
             synchronized (ConnectionFactory.class) {
                 cf = instance;
-                if(cf == null) {
+                if (cf == null) {
                     cf = new ConnectionFactory(dbConfig);
                     instance = cf;
                 }

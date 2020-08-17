@@ -92,8 +92,8 @@ public class JdbcWriter {
         log.info("Auto generate sql: " + sql);
 
         Connection stub = null;
-        try(Connection connection = ConnectionFactory.getInstance().createConnection();
-            PreparedStatement statement= connection.prepareStatement(sql)) {
+        try (Connection connection = ConnectionFactory.getInstance().createConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
             connection.setAutoCommit(false);
             stub = connection;
 

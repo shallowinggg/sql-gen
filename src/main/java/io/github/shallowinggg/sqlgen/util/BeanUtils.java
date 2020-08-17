@@ -1,8 +1,5 @@
 package io.github.shallowinggg.sqlgen.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import javax.annotation.Nullable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -10,7 +7,11 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URL;
 import java.time.temporal.Temporal;
-import java.util.*;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * Static convenience methods for JavaBeans: for instantiating beans,

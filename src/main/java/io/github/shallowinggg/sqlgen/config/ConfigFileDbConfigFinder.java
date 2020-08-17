@@ -76,7 +76,7 @@ public class ConfigFileDbConfigFinder implements DbConfigFinder {
                         .filter(DbConfigProperties::isCandidate).collect(Collectors.toList());
                 for (DbConfigProperties properties : candidates) {
                     DbConfig dbConfig = resolve(properties);
-                    if(dbConfig != null) {
+                    if (dbConfig != null) {
                         return dbConfig;
                     }
                 }
@@ -115,7 +115,7 @@ public class ConfigFileDbConfigFinder implements DbConfigFinder {
     }
 
     private Set<String> asSet(List<String> searchNames) {
-        if(CollectionUtils.isNotEmpty(searchNames)) {
+        if (CollectionUtils.isNotEmpty(searchNames)) {
             return new LinkedHashSet<>(searchNames);
         }
         return Collections.emptySet();

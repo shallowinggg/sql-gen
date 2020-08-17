@@ -1,8 +1,8 @@
 package io.github.shallowinggg.sqlgen;
 
+import io.github.shallowinggg.sqlgen.config.ColumnConfig;
 import io.github.shallowinggg.sqlgen.config.DbConfig;
 import io.github.shallowinggg.sqlgen.config.DbConfigFinder;
-import io.github.shallowinggg.sqlgen.config.ColumnConfig;
 import io.github.shallowinggg.sqlgen.env.ConfigurableEnvironment;
 import io.github.shallowinggg.sqlgen.env.StandardEnvironment;
 import io.github.shallowinggg.sqlgen.io.DefaultResourceLoader;
@@ -32,7 +32,7 @@ public class SqlGenApplication {
     private List<ColumnConfig> columnConfigs;
 
     public void run() {
-        if(dbConfig == null) {
+        if (dbConfig == null) {
             dbConfigFinder.find(environment, resourceLoader);
         }
         ConnectionFactory.init(dbConfig);

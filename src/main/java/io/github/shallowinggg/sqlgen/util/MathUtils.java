@@ -9,6 +9,7 @@ public abstract class MathUtils {
      * Fast method of finding the next power of 2 greater than or equal to the supplied value.
      * <p>This method will do runtime bounds checking and call {@link #findNextPositivePowerOfTwo(int)} if within a
      * valid range.
+     *
      * @param value from which to search for next power of 2
      * @return The next power of 2 or the value itself if it is a power of 2.
      * <p>Special cases for return values are as follows:

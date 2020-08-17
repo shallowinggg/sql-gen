@@ -8,7 +8,6 @@ import io.github.shallowinggg.sqlgen.random.Randomizer;
 public interface ColumnRestriction {
 
     /**
-     *
      * @return
      */
     <T> Randomizer<T> randomizer();

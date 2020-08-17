@@ -42,10 +42,11 @@ public class FactoriesLoader {
      * {@value #FACTORIES_RESOURCE_LOCATION}, using the given class loader.
      * <p>If a custom instantiation strategy is required, use {@link #loadFactoryNames}
      * to obtain all registered factory names.
+     *
      * @param factoryType the interface or abstract class representing the factory
      * @param classLoader the ClassLoader to use for loading (can be {@code null} to use the default)
      * @throws IllegalArgumentException if any factory implementation class cannot
-     * be loaded or if an error occurs while instantiating any factory
+     *                                  be loaded or if an error occurs while instantiating any factory
      * @see #loadFactoryNames
      */
     public static <T> List<T> loadFactories(Class<T> factoryType, @Nullable ClassLoader classLoader) {
@@ -69,9 +70,10 @@ public class FactoriesLoader {
      * Load the fully qualified class names of factory implementations of the
      * given type from {@value #FACTORIES_RESOURCE_LOCATION}, using the given
      * class loader.
+     *
      * @param factoryType the interface or abstract class representing the factory
      * @param classLoader the ClassLoader to use for loading resources; can be
-     * {@code null} to use the default
+     *                    {@code null} to use the default
      * @throws IllegalArgumentException if an error occurs while loading factory names
      * @see #loadFactories
      */
@@ -104,8 +106,7 @@ public class FactoriesLoader {
             }
             CACHE.put(classLoader, result);
             return result;
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             throw new IllegalArgumentException("Unable to load factories from location [" +
                     FACTORIES_RESOURCE_LOCATION + "]", ex);
         }
@@ -120,8 +121,7 @@ public class FactoriesLoader {
                         "Class [" + factoryImplementationName + "] is not assignable to factory type [" + factoryType.getName() + "]");
             }
             return (T) ReflectionUtils.accessibleConstructor(factoryImplementationClass).newInstance();
-        }
-        catch (Throwable ex) {
+        } catch (Throwable ex) {
             throw new IllegalArgumentException(
                     "Unable to instantiate factory class [" + factoryImplementationName + "] for factory type [" + factoryType.getName() + "]",
                     ex);

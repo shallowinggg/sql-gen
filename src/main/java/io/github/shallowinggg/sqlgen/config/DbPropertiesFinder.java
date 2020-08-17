@@ -3,9 +3,29 @@ package io.github.shallowinggg.sqlgen.config;
 import java.util.List;
 
 /**
+ * Interface that used to provide basic infos for finding db configurations.
+ * <p>
+ * DbPropertiesFinder implementations have to be registered in
+ * {@code META-INF/spring.factories}, using the fully qualified name of
+ * this class as the key.
+ *
  * @author ding shimin
+ * @see SpringBootDbPropertiesFinder
+ * @see DefaultDbPropertiesFinder
+ * @since 1.0
  */
 public interface DbPropertiesFinder {
+
+    /**
+     * Determine whether this finder is a candidate. This method is mainly
+     * used to optimize if this finder won't be used in current environment.
+     * For example, {@link SpringBootDbPropertiesFinder} will return false if
+     * not use SpringBoot in current environment.
+     *
+     * @return {@code true} if this finder will be used in current environment,
+     * or {@code false} otherwise.
+     */
+    boolean isCandidate();
 
     /**
      * Return search locations for the config files. Each search
@@ -25,17 +45,12 @@ public interface DbPropertiesFinder {
      */
     List<String> getSearchNames();
 
-    List<DbConfigProperties> getDbConfigProperties();
-
     /**
-     * Determine whether this finder is a candidate. This method is mainly
-     * used to optimize if this finder won't be used in current environment.
-     * For example, {@link SpringBootDbPropertiesFinder} will return false if
-     * don't use springboot in current environment.
+     * Return {@link DbConfigProperties}s which will be used to find
+     * db configuration.
      *
-     * @return {@code true} if this finder will be used in current environment,
-     * or {@code false} otherwise.
+     * @return DbConfigProperties list
      */
-    boolean isCandidate();
+    List<DbConfigProperties> getDbConfigProperties();
 
 }

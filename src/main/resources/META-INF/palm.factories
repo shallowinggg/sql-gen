@@ -1,0 +1,3 @@
+io.github.shallowinggg.sqlgen.config.DbPropertiesFinder=\
+io.github.shallowinggg.sqlgen.config.DefaultDbPropertiesFinder,\
+io.github.shallowinggg.sqlgen.config.SpringBootDbPropertiesFinder
