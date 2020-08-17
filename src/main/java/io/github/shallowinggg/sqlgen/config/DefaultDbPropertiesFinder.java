@@ -5,9 +5,9 @@ import java.util.List;
 /**
  * @author ding shimin
  */
-public class DefaultPropertiesFinder extends AbstractPropertiesFinder {
+public class DefaultDbPropertiesFinder extends AbstractDbPropertiesFinder {
 
-    public DefaultPropertiesFinder() {
+    public DefaultDbPropertiesFinder() {
         super(null, null);
     }
 

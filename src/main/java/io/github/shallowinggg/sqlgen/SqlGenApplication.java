@@ -1,7 +1,7 @@
 package io.github.shallowinggg.sqlgen;
 
 import io.github.shallowinggg.sqlgen.config.DbConfig;
-import io.github.shallowinggg.sqlgen.config.EnvironmentPostProcessor;
+import io.github.shallowinggg.sqlgen.config.DbConfigFinder;
 import io.github.shallowinggg.sqlgen.config.ColumnConfig;
 import io.github.shallowinggg.sqlgen.env.ConfigurableEnvironment;
 import io.github.shallowinggg.sqlgen.env.StandardEnvironment;
@@ -25,7 +25,7 @@ public class SqlGenApplication {
 
     private ConfigurableEnvironment environment = new StandardEnvironment();
 
-    private EnvironmentPostProcessor environmentPostProcessor;
+    private DbConfigFinder dbConfigFinder;
 
     private DbConfig dbConfig;
 
@@ -33,7 +33,7 @@ public class SqlGenApplication {
 
     public void run() {
         if(dbConfig == null) {
-            environmentPostProcessor.postProcessEnvironment(environment, this);
+            dbConfigFinder.find(environment, resourceLoader);
         }
         ConnectionFactory.init(dbConfig);
         JdbcReader jdbcReader = new SimpleJdbcReader();

@@ -5,7 +5,7 @@ package io.github.shallowinggg.sqlgen.config;
  */
 public interface DbConfigProperties {
 
-    boolean isCandicate();
+    boolean isCandidate();
 
     String getUrlPropertyName();
 

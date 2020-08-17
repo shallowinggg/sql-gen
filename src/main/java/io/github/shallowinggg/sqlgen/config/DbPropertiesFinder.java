@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * @author ding shimin
  */
-public interface PropertiesFinder {
+public interface DbPropertiesFinder {
 
     /**
      * Return search locations for the config files. Each search
@@ -30,7 +30,7 @@ public interface PropertiesFinder {
     /**
      * Determine whether this finder is a candidate. This method is mainly
      * used to optimize if this finder won't be used in current environment.
-     * For example, {@link SpringBootPropertiesFinder} will return false if
+     * For example, {@link SpringBootDbPropertiesFinder} will return false if
      * don't use springboot in current environment.
      *
      * @return {@code true} if this finder will be used in current environment,

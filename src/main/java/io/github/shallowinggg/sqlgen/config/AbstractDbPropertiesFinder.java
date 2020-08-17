@@ -3,11 +3,11 @@ package io.github.shallowinggg.sqlgen.config;
 /**
  * @author ding shimin
  */
-public abstract class AbstractPropertiesFinder implements PropertiesFinder {
+public abstract class AbstractDbPropertiesFinder implements DbPropertiesFinder {
 
     private String searchLocations;
 
-    protected AbstractPropertiesFinder(String searchLocations, String searchNames) {
+    protected AbstractDbPropertiesFinder(String searchLocations, String searchNames) {
         this.searchLocations = searchLocations;
     }
 

@@ -1,6 +1,5 @@
 package io.github.shallowinggg.sqlgen.config;
 
-import io.github.shallowinggg.sqlgen.SqlGenApplication;
 import io.github.shallowinggg.sqlgen.env.ConfigurableEnvironment;
 import io.github.shallowinggg.sqlgen.env.Environment;
 import io.github.shallowinggg.sqlgen.env.PropertiesPropertySourceLoader;
@@ -36,7 +35,7 @@ import java.util.stream.Stream;
 /**
  * @author ding shimin
  */
-public class DefaultPostProcessor implements EnvironmentPostProcessor {
+public class ConfigFileDbConfigFinder implements DbConfigFinder {
 
     private final Log logger = LogFactory.getLog(getClass());
 
@@ -59,32 +58,34 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
 
 
     @Override
-    public void postProcessEnvironment(ConfigurableEnvironment environment, SqlGenApplication sqlGenApplication) {
-        this.resourceLoader = sqlGenApplication.getResourceLoader();
+    public DbConfig find(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
+        this.resourceLoader = resourceLoader;
         this.environment = environment;
-        List<PropertiesFinder> propertiesFinders = loadPropertiesFinders();
-        for (PropertiesFinder finder : propertiesFinders) {
+        List<DbPropertiesFinder> dbPropertiesFinders = loadPropertiesFinders();
+        for (DbPropertiesFinder finder : dbPropertiesFinders) {
             if (finder instanceof EnvironmentAware) {
                 ((EnvironmentAware) finder).setEnvironment(environment);
             }
         }
 
-        for (PropertiesFinder finder : propertiesFinders) {
+        for (DbPropertiesFinder finder : dbPropertiesFinders) {
             load(finder, environment.getPropertySources()::addLast);
 
             if (finder.getDbConfigProperties() != null) {
                 List<DbConfigProperties> candidates = finder.getDbConfigProperties().stream()
-                        .filter(DbConfigProperties::isCandicate).collect(Collectors.toList());
+                        .filter(DbConfigProperties::isCandidate).collect(Collectors.toList());
                 for (DbConfigProperties properties : candidates) {
-                    if (resolve(properties, environment, sqlGenApplication)) {
-                        return;
+                    DbConfig dbConfig = resolve(properties);
+                    if(dbConfig != null) {
+                        return dbConfig;
                     }
                 }
             }
         }
+        return null;
     }
 
-    private boolean resolve(DbConfigProperties properties, ConfigurableEnvironment environment, SqlGenApplication application) {
+    private DbConfig resolve(DbConfigProperties properties) {
         String url = environment.getProperty(properties.getUrlPropertyName());
         String driverName = environment.getProperty(properties.getDriverNamePropertyName());
         String username = environment.getProperty(properties.getUsernamePropertyName());
@@ -92,18 +93,17 @@ public class DefaultPostProcessor implements EnvironmentPostProcessor {
 
         DbConfig dbConfig = new DbConfig(url, driverName, username, password);
         if (dbConfig.isValid()) {
-            application.setDbConfig(dbConfig);
-            return true;
+            return dbConfig;
         }
-        return false;
+        return null;
     }
 
-    private List<PropertiesFinder> loadPropertiesFinders() {
-        return FactoriesLoader.loadFactories(PropertiesFinder.class, getClass().getClassLoader()).
-                stream().filter(PropertiesFinder::isCandidate).collect(Collectors.toList());
+    private List<DbPropertiesFinder> loadPropertiesFinders() {
+        return FactoriesLoader.loadFactories(DbPropertiesFinder.class, getClass().getClassLoader()).
+                stream().filter(DbPropertiesFinder::isCandidate).collect(Collectors.toList());
     }
 
-    private void load(PropertiesFinder finder, Consumer<PropertySource<?>> consumer) {
+    private void load(DbPropertiesFinder finder, Consumer<PropertySource<?>> consumer) {
         List<String> searchLocations = finder.getSearchLocations();
         for (String location : searchLocations) {
             boolean isFolder = location.endsWith("/");

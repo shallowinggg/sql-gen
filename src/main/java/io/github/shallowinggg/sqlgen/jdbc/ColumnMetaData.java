@@ -51,6 +51,7 @@ public class ColumnMetaData {
         return sqlType;
     }
 
+    @Nullable
     public String getDefaultValue() {
         return defaultValue;
     }
