@@ -52,14 +52,14 @@ public class JdbcWriter {
             Randomizer<?> randomizer = columnConfigMap.get(column.getName()).getRestriction().randomizer();
             if (randomizer == null) {
                 // create type matching randomizer
-                randomizer = createDefaultRandomizer();
+                randomizer = createDefaultRandomizer(column.getJavaType(), column.getSize());
             }
             randomizerMap.put(column.getName(), randomizer);
         }
 
     }
 
-    private Randomizer<?> createDefaultRandomizer() {
+    private Randomizer<?> createDefaultRandomizer(Class<?> type, int size) {
         return null;
     }
 
@@ -97,7 +97,7 @@ public class JdbcWriter {
             connection.setAutoCommit(false);
             stub = connection;
 
-            BooleanRandomizer bool = BooleanRandomizer.make();
+            BooleanRandomizer bool = BooleanRandomizer.create();
             for (int i = 0; i < rows; ++i) {
                 int idx = 1;
                 for (BuildInfo buildInfo : map.values()) {

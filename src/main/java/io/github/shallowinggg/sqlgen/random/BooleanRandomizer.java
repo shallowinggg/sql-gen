@@ -7,7 +7,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class BooleanRandomizer implements Randomizer<Boolean> {
 
-    public static BooleanRandomizer make() {
+    public static BooleanRandomizer create() {
         return new BooleanRandomizer();
     }
 

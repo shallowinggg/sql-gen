@@ -70,4 +70,16 @@ public class App {
             throw new JdbcException("Unexpected problem when read column metadata for table ", e);
         }
     }
+
+    @Test
+    public void test2() {
+        String url = "jdbc:mysql://localhost:3306/test";
+        String driveName = "com.mysql.jdbc.Driver";
+        String username = "root";
+        String password = "root";
+
+        DbConfig dbConfig = new DbConfig(url, driveName, username, password);
+        ConnectionFactory.init(dbConfig);
+        JdbcSupport.readColumnMetaData("chars").forEach(System.out::println);
+    }
 }

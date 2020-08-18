@@ -1,6 +1,7 @@
 package io.github.shallowinggg.sqlgen.jdbc;
 
 import io.github.shallowinggg.sqlgen.jdbc.support.JdbcSupport;
+import io.github.shallowinggg.sqlgen.jdbc.support.JdbcTypeJavaClassMappings;
 import io.github.shallowinggg.sqlgen.jdbc.support.JdbcTypeNameMapper;
 import io.github.shallowinggg.sqlgen.util.Assert;
 
@@ -15,7 +16,9 @@ public class ColumnMetaData {
 
     private final int sqlType;
 
-    private final String type;
+    private final String sqlTypeName;
+
+    private final Class<?> javaType;
 
     @Nullable
     private final String defaultValue;
@@ -34,7 +37,8 @@ public class ColumnMetaData {
 
         this.name = name;
         this.sqlType = sqlType;
-        this.type = JdbcTypeNameMapper.getTypeName(sqlType);
+        this.sqlTypeName = JdbcTypeNameMapper.getTypeName(sqlType);
+        this.javaType = JdbcTypeJavaClassMappings.INSTANCE.determineJavaClassForJdbcTypeCode(sqlType);
         this.defaultValue = defaultValue;
         this.size = size;
         this.nullable = nullable;
@@ -51,9 +55,17 @@ public class ColumnMetaData {
         return sqlType;
     }
 
+    public Class<?> getJavaType() {
+        return javaType;
+    }
+
     @Nullable
     public String getDefaultValue() {
         return defaultValue;
+    }
+
+    public int getSize() {
+        return size;
     }
 
     public String getName() {
@@ -81,7 +93,7 @@ public class ColumnMetaData {
         return "ColumnMetaData{" +
                 "name='" + name + '\'' +
                 ", sqlType=" + sqlType +
-                ", type='" + type + '\'' +
+                ", type='" + sqlTypeName + '\'' +
                 ", defaultValue='" + defaultValue + '\'' +
                 ", size=" + size +
                 ", nullable=" + nullable +
