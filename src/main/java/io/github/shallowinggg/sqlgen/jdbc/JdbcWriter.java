@@ -9,6 +9,7 @@ import io.github.shallowinggg.sqlgen.random.BooleanRandomizer;
 import io.github.shallowinggg.sqlgen.random.Randomizer;
 import io.github.shallowinggg.sqlgen.restriction.ColumnRestriction;
 import io.github.shallowinggg.sqlgen.restriction.ColumnRestrictions;
+import io.github.shallowinggg.sqlgen.restriction.SimpleColumnRestriction;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -16,7 +17,6 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,33 +33,38 @@ public class JdbcWriter {
 
     private int rows;
 
-    private List<ColumnConfig> columnConfigs;
-
     private Map<String, ColumnConfig> columnConfigMap;
 
-    public JdbcWriter(List<ColumnConfig> columnConfigs) {
-        this.columnConfigs = columnConfigs;
+    public JdbcWriter(Map<String, ColumnConfig> columnConfigMap) {
+        this.columnConfigMap = columnConfigMap;
     }
 
-    public void execute() throws SQLException {
+    public void execute(String tableName) throws SQLException {
         DatabaseMetaData databaseMetaData = JdbcSupport.readDatabaseMetaData();
         if (databaseMetaData.isReadOnly()) {
             throw new SqlGenException("Database is read only");
         }
-        List<ColumnMetaData> columnMetaDataList = JdbcSupport.readColumnMetaData("");
-        Map<String, Randomizer<?>> randomizerMap = new HashMap<>(columnConfigMap.size());
-        for (ColumnMetaData column : columnMetaDataList) {
-            Randomizer<?> randomizer = columnConfigMap.get(column.getName()).getRestriction().randomizer();
-            if (randomizer == null) {
-                // create type matching randomizer
-                randomizer = createDefaultRandomizer(column.getJavaType(), column.getSize());
-            }
-            randomizerMap.put(column.getName(), randomizer);
+
+        List<ColumnMetaData> columnMetaDataList = JdbcSupport.readColumnMetaData(tableName);
+        if(log.isDebugEnabled()) {
+            StringBuilder metadataBuilder = new StringBuilder(columnMetaDataList.size() * 30);
+            columnMetaDataList.forEach(columnMetaData -> metadataBuilder.append(columnMetaData.toString()));
+            log.debug("Column metadata for table [" + tableName +"]:\n" + metadataBuilder.toString());
         }
 
+        LinkedHashMap<String, BuildInfo> buildInfoMap = new LinkedHashMap<>(columnMetaDataList.size());
+        for (ColumnMetaData column : columnMetaDataList) {
+            ColumnRestriction restriction = columnConfigMap.get(column.getName()).getRestriction();
+            if(restriction == null) {
+                Randomizer<?> randomizer = createDefaultRandomizer(column.getJavaType(), column.getSize());
+                restriction = new SimpleColumnRestriction(randomizer);
+            }
+            buildInfoMap.put(column.getName(), new BuildInfo(column, restriction));
+        }
+        build(buildInfoMap);
     }
 
-    private Randomizer<?> createDefaultRandomizer(Class<?> type, int size) {
+    private <T> Randomizer<T> createDefaultRandomizer(Class<T> type, int size) {
         return null;
     }
 
@@ -101,7 +106,7 @@ public class JdbcWriter {
             for (int i = 0; i < rows; ++i) {
                 int idx = 1;
                 for (BuildInfo buildInfo : map.values()) {
-                    Randomizer<?> randomizer = buildInfo.restriction.randomizer();
+                    Randomizer<?> randomizer = buildInfo.randomizer();
                     Object val;
                     if (buildInfo.isNullable() && Boolean.TRUE.equals(bool.nextValue())) {
                         statement.setNull(idx, buildInfo.sqlType());
@@ -135,9 +140,14 @@ public class JdbcWriter {
     }
 
     private static class BuildInfo {
-        ColumnMetaData metaData;
+        private final ColumnMetaData metaData;
 
-        ColumnRestriction restriction;
+        private final ColumnRestriction restriction;
+
+        BuildInfo(ColumnMetaData metaData, ColumnRestriction restriction) {
+            this.metaData = metaData;
+            this.restriction = restriction;
+        }
 
         public int sqlType() {
             return metaData.getSqlType();
@@ -157,6 +167,10 @@ public class JdbcWriter {
 
         public boolean hasDefaultValue() {
             return metaData.hasDefaultValue();
+        }
+
+        public Randomizer<?> randomizer() {
+            return restriction.randomizer();
         }
     }
 }

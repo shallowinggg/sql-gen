@@ -9,6 +9,9 @@ class UseNullableRestriction implements ColumnRestriction {
 
     public static final UseNullableRestriction INSTANCE = new UseNullableRestriction();
 
+    private UseNullableRestriction() {
+    }
+
     @Override
     public Randomizer<?> randomizer() {
         return null;

@@ -9,6 +9,9 @@ class UseDefaultRestriction implements ColumnRestriction {
 
     public static final UseDefaultRestriction INSTANCE = new UseDefaultRestriction();
 
+    private UseDefaultRestriction() {
+    }
+
     @Override
     public Randomizer<?> randomizer() {
         return null;

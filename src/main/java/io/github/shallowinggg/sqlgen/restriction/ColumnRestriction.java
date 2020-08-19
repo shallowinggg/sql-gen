@@ -10,5 +10,5 @@ public interface ColumnRestriction {
     /**
      * @return
      */
-    <T> Randomizer<T> randomizer();
+    Randomizer<?> randomizer();
 }

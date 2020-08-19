@@ -11,7 +11,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @ThreadSafe
 public class ByteRandomizer implements Randomizer<Byte> {
 
-    private static final int DEFAULT_MAX_VALUE = 128;
+    private static final int DEFAULT_MAX_VALUE = Byte.MAX_VALUE + 1;
 
     private final byte maxValue;
 
@@ -28,7 +28,7 @@ public class ByteRandomizer implements Randomizer<Byte> {
     }
 
     public ByteRandomizer(int maxValue) {
-        Assert.isTrue(maxValue > 0 && maxValue <= 128,
+        Assert.isTrue(maxValue > 0 && maxValue <= DEFAULT_MAX_VALUE,
                 "max value must not out of range, expected: (0, 128], actual: " + maxValue);
         this.maxValue = (byte) maxValue;
     }
