@@ -13,6 +13,8 @@ import io.github.shallowinggg.sqlgen.restriction.SimpleColumnRestriction;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -46,25 +48,55 @@ public class JdbcWriter {
         }
 
         List<ColumnMetaData> columnMetaDataList = JdbcSupport.readColumnMetaData(tableName);
-        if(log.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {
             StringBuilder metadataBuilder = new StringBuilder(columnMetaDataList.size() * 30);
             columnMetaDataList.forEach(columnMetaData -> metadataBuilder.append(columnMetaData.toString()));
-            log.debug("Column metadata for table [" + tableName +"]:\n" + metadataBuilder.toString());
+            log.debug("Column metadata for table [" + tableName + "]:\n" + metadataBuilder.toString());
         }
 
         LinkedHashMap<String, BuildInfo> buildInfoMap = new LinkedHashMap<>(columnMetaDataList.size());
         for (ColumnMetaData column : columnMetaDataList) {
             ColumnRestriction restriction = columnConfigMap.get(column.getName()).getRestriction();
-            if(restriction == null) {
+            if (restriction == null) {
                 Randomizer<?> randomizer = createDefaultRandomizer(column.getJavaType(), column.getSize());
                 restriction = new SimpleColumnRestriction(randomizer);
             }
-            buildInfoMap.put(column.getName(), new BuildInfo(column, restriction));
+            BuildInfo buildInfo = new BuildInfo(column, restriction);
+            validate(buildInfo);
+            buildInfoMap.put(column.getName(), buildInfo);
         }
         build(buildInfoMap);
     }
 
     private <T> Randomizer<T> createDefaultRandomizer(Class<T> type, int size) {
+        return null;
+    }
+
+    private void validate(BuildInfo buildInfo) {
+        Randomizer<?> randomizer = buildInfo.randomizer();
+        Class<?> randomType = findParameterType(randomizer);
+        Class<?> requireType = buildInfo.javaType();
+        if (randomType == null || !requireType.isAssignableFrom(randomType)) {
+            throw new RuntimeException(String.format("Illegal restriction for column [%s], " +
+                            "expected type: [%s], restriction type: [%s]", buildInfo.columnName(),
+                    requireType, randomType));
+        }
+    }
+
+    static Class<?> findParameterType(Randomizer<?> randomizer) {
+        Class<?> type = randomizer.getClass();
+        while (type != null) {
+            Type[] types = type.getGenericInterfaces();
+            if (types.length == 0) {
+                type = type.getSuperclass();
+            } else {
+                ParameterizedType parameterizedType = (ParameterizedType) types[0];
+                Type actualTypeArgument = parameterizedType.getActualTypeArguments()[0];
+                if(actualTypeArgument instanceof Class<?>) {
+                    return (Class<?>) actualTypeArgument;
+                }
+            }
+        }
         return null;
     }
 
@@ -149,12 +181,20 @@ public class JdbcWriter {
             this.restriction = restriction;
         }
 
+        public String columnName() {
+            return metaData.getName();
+        }
+
         public int sqlType() {
             return metaData.getSqlType();
         }
 
         public Object defaultValue() {
             return metaData.getDefaultValue();
+        }
+
+        public Class<?> javaType() {
+            return metaData.getJavaType();
         }
 
         public boolean isNullable() {
