@@ -2,12 +2,19 @@ package io.github.shallowinggg.sqlgen.random;
 
 import io.github.shallowinggg.sqlgen.util.Assert;
 
+import javax.annotation.concurrent.ThreadSafe;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
+ * Randomizer for type {@link Long}.
+ *
+ * This class is stateless and thread safe.
+ *
  * @author ding shimin
+ * @since 1.0
  */
-public class LongRandomizer implements Randomizer<Long> {
+@ThreadSafe
+public class LongRandomizer extends AbstractTypedRandomizer<Long> {
 
     private static final long DEFAULT_MAX_VALUE = Long.MAX_VALUE;
 

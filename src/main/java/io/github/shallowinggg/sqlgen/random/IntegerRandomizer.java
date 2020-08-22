@@ -1,17 +1,16 @@
 package io.github.shallowinggg.sqlgen.random;
 
-import io.github.shallowinggg.sqlgen.util.Assert;
-
-import java.util.concurrent.ThreadLocalRandom;
-
 /**
+ * Randomizer for type {@link Integer}.
+ *
+ * This class is stateless and thread safe.
+ *
  * @author ding shimin
+ * @since 1.0
  */
-public class IntegerRandomizer implements Randomizer<Integer> {
+public class IntegerRandomizer extends AbstractIntegerRandomizer<Integer> {
 
     private static final int DEFAULT_MAX_VALUE = Integer.MAX_VALUE;
-
-    private final int maxValue;
 
     public static IntegerRandomizer create() {
         return new IntegerRandomizer();
@@ -26,13 +25,11 @@ public class IntegerRandomizer implements Randomizer<Integer> {
     }
 
     public IntegerRandomizer(int maxValue) {
-        Assert.isTrue(maxValue > 0,
-                "max value must be positive, actual: " + maxValue);
-        this.maxValue = maxValue;
+        super(rangeCheck(maxValue, 1, DEFAULT_MAX_VALUE));
     }
 
     @Override
     public Integer nextValue() {
-        return ThreadLocalRandom.current().nextInt(maxValue);
+        return nextInt();
     }
 }

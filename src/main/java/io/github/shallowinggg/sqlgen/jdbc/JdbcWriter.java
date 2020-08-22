@@ -5,6 +5,7 @@ import io.github.shallowinggg.sqlgen.SqlGenException;
 import io.github.shallowinggg.sqlgen.config.ColumnConfig;
 import io.github.shallowinggg.sqlgen.jdbc.support.ConnectionFactory;
 import io.github.shallowinggg.sqlgen.jdbc.support.JdbcSupport;
+import io.github.shallowinggg.sqlgen.random.AbstractTypedRandomizer;
 import io.github.shallowinggg.sqlgen.random.BooleanRandomizer;
 import io.github.shallowinggg.sqlgen.random.Randomizer;
 import io.github.shallowinggg.sqlgen.restriction.ColumnRestriction;
@@ -74,30 +75,41 @@ public class JdbcWriter {
 
     private void validate(BuildInfo buildInfo) {
         Randomizer<?> randomizer = buildInfo.randomizer();
-        Class<?> randomType = findParameterType(randomizer);
-        Class<?> requireType = buildInfo.javaType();
-        if (randomType == null || !requireType.isAssignableFrom(randomType)) {
-            throw new RuntimeException(String.format("Illegal restriction for column [%s], " +
-                            "expected type: [%s], restriction type: [%s]", buildInfo.columnName(),
-                    requireType, randomType));
+        Class<?> jdbcType = buildInfo.javaType();
+        String columnName = buildInfo.columnName();
+        if (randomizer instanceof AbstractTypedRandomizer) {
+            if (!((AbstractTypedRandomizer<?>) randomizer).supportJdbcType(jdbcType)) {
+                throw new IllegalArgumentException(String.format("Illegal randomizer for column [%s], " +
+                        "expected column type: [%s]", columnName, jdbcType.getName()));
+            }
+        } else {
+            backupCommonValidation(randomizer, jdbcType, columnName);
         }
     }
 
-    static Class<?> findParameterType(Randomizer<?> randomizer) {
-        Class<?> type = randomizer.getClass();
-        while (type != null) {
-            Type[] types = type.getGenericInterfaces();
-            if (types.length == 0) {
-                type = type.getSuperclass();
-            } else {
-                ParameterizedType parameterizedType = (ParameterizedType) types[0];
-                Type actualTypeArgument = parameterizedType.getActualTypeArguments()[0];
-                if(actualTypeArgument instanceof Class<?>) {
-                    return (Class<?>) actualTypeArgument;
+    private void backupCommonValidation(Randomizer<?> randomizer, Class<?> jdbcType, String columnName) {
+        Class<?> clazz = randomizer.getClass();
+        while (clazz != null) {
+            // only check generic interfaces, otherwise you should
+            // extend class AbstractTypedRandomizer
+            Type[] types = clazz.getGenericInterfaces();
+            if (types.length != 0) {
+                for (Type type : types) {
+                    ParameterizedType parameterizedType = (ParameterizedType) type;
+                    Type rawType = parameterizedType.getRawType();
+                    if (rawType instanceof Class<?> && rawType.equals(Randomizer.class)) {
+                        Type actualTypeArgument = parameterizedType.getActualTypeArguments()[0];
+                        if (actualTypeArgument instanceof Class<?> &&
+                                jdbcType.isAssignableFrom((Class<?>) actualTypeArgument)) {
+                            return;
+                        }
+                    }
                 }
             }
+            clazz = clazz.getSuperclass();
         }
-        return null;
+        throw new IllegalArgumentException(String.format("Illegal randomizer for column [%s], " +
+                "expected column type: [%s]", columnName, jdbcType.getName()));
     }
 
     private void build(LinkedHashMap<String, BuildInfo> map) {

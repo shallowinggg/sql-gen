@@ -16,13 +16,13 @@ import java.util.concurrent.ThreadLocalRandom;
  * of the string that will be generated randomly. If you not
  * specify this value, use {@link #DEFAULT_MAX_LEN} as default.
  * <p>
- * This class is thread safe.
+ * This class is stateless and thread safe.
  *
  * @author ding shimin
  * @since 1.0
  */
 @ThreadSafe
-public class StringRandomizer implements Randomizer<String> {
+public class StringRandomizer extends AbstractTypedRandomizer<String> {
 
     private static final int DEFAULT_MAX_LEN = 1000;
 
