@@ -35,6 +35,12 @@ public final class ColumnDescription {
     public static final String COLUMN_NULLABLE = "NULLABLE";
 
     /**
+     * the number of fractional digits. Null is returned for data types where
+     * DECIMAL_DIGITS is not applicable.
+     */
+    public static final String DECIMAL_DIGITS = "DECIMAL_DIGITS";
+
+    /**
      * might not allow <code>NULL</code> values
      */
     public static final String COLUMN_NO_NULL = "columnNoNulls";

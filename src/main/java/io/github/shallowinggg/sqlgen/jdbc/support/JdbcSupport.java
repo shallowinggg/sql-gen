@@ -100,10 +100,11 @@ public class JdbcSupport {
                 int sqlType = rs.getInt(ColumnDescription.COLUMN_TYPE);
                 String defaultValue = rs.getString(ColumnDescription.COLUMN_DEFAULT);
                 int size = rs.getInt(ColumnDescription.COLUMN_SIZE);
+                int digits = rs.getInt(ColumnDescription.DECIMAL_DIGITS);
                 boolean isNullable = ColumnNullable.isNullable(rs.getInt(ColumnDescription.COLUMN_NULLABLE));
                 boolean isAutoIncrement = ColumnAutoIncrement.isAutoIncrement(rs.getString(ColumnDescription.COLUMN_AUTOINCREMENT));
 
-                columns.add(ColumnMetaData.of(name, sqlType, defaultValue, size,
+                columns.add(ColumnMetaData.of(name, sqlType, defaultValue, size, digits,
                         isNullable, isAutoIncrement, uniqueColumns.contains(name)));
             }
         } catch (SQLException e) {

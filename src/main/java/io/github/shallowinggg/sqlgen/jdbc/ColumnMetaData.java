@@ -25,13 +25,15 @@ public class ColumnMetaData {
 
     private final int size;
 
+    private final int digits;
+
     private final boolean nullable;
 
     private final boolean autoIncrement;
 
     private final boolean unique;
 
-    public ColumnMetaData(String name, int sqlType, @Nullable String defaultValue, int size,
+    public ColumnMetaData(String name, int sqlType, @Nullable String defaultValue, int size, int digits,
                           boolean nullable, boolean autoIncrement, boolean unique) {
         Assert.hasText(name, "name must has text");
 
@@ -41,14 +43,15 @@ public class ColumnMetaData {
         this.javaType = JdbcTypeJavaClassMappings.INSTANCE.determineJavaClassForJdbcTypeCode(sqlType);
         this.defaultValue = defaultValue;
         this.size = size;
+        this.digits = digits;
         this.nullable = nullable;
         this.autoIncrement = autoIncrement;
         this.unique = unique;
     }
 
-    public static ColumnMetaData of(String name, int sqlType, @Nullable String defaultValue, int size,
+    public static ColumnMetaData of(String name, int sqlType, @Nullable String defaultValue, int size, int digits,
                                     boolean nullable, boolean autoIncrement, boolean unique) {
-        return new ColumnMetaData(name, sqlType, defaultValue, size, nullable, autoIncrement, unique);
+        return new ColumnMetaData(name, sqlType, defaultValue, size, digits, nullable, autoIncrement, unique);
     }
 
     public int getSqlType() {
@@ -93,11 +96,14 @@ public class ColumnMetaData {
         return "ColumnMetaData{" +
                 "name='" + name + '\'' +
                 ", sqlType=" + sqlType +
-                ", type='" + sqlTypeName + '\'' +
+                ", sqlTypeName='" + sqlTypeName + '\'' +
+                ", javaType=" + javaType +
                 ", defaultValue='" + defaultValue + '\'' +
                 ", size=" + size +
+                ", digits=" + digits +
                 ", nullable=" + nullable +
                 ", autoIncrement=" + autoIncrement +
+                ", unique=" + unique +
                 '}';
     }
 }
