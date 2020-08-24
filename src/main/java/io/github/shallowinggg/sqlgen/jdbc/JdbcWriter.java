@@ -8,6 +8,8 @@ import io.github.shallowinggg.sqlgen.jdbc.support.JdbcSupport;
 import io.github.shallowinggg.sqlgen.random.AbstractTypedRandomizer;
 import io.github.shallowinggg.sqlgen.random.BooleanRandomizer;
 import io.github.shallowinggg.sqlgen.random.Randomizer;
+import io.github.shallowinggg.sqlgen.random.RandomizerFactory;
+import io.github.shallowinggg.sqlgen.random.SimpleRandomizerFactory;
 import io.github.shallowinggg.sqlgen.restriction.ColumnRestriction;
 import io.github.shallowinggg.sqlgen.restriction.ColumnRestrictions;
 import io.github.shallowinggg.sqlgen.restriction.SimpleColumnRestriction;
@@ -31,10 +33,11 @@ import java.util.Map;
 public class JdbcWriter {
     private final Log log = LogFactory.getLog(getClass());
 
-
     private String tableName;
 
     private int rows;
+
+    private RandomizerFactory randomizerFactory = new SimpleRandomizerFactory();
 
     private Map<String, ColumnConfig> columnConfigMap;
 
@@ -59,7 +62,10 @@ public class JdbcWriter {
         for (ColumnMetaData column : columnMetaDataList) {
             ColumnRestriction restriction = columnConfigMap.get(column.getName()).getRestriction();
             if (restriction == null) {
-                Randomizer<?> randomizer = createDefaultRandomizer(column.getJavaType(), column.getSize());
+                Randomizer<?> randomizer = createDefaultRandomizer(column);
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Create default randomizer for column [%s]", column.getName()));
+                }
                 restriction = new SimpleColumnRestriction(randomizer);
             }
             BuildInfo buildInfo = new BuildInfo(column, restriction);
@@ -69,8 +75,8 @@ public class JdbcWriter {
         build(buildInfoMap);
     }
 
-    private <T> Randomizer<T> createDefaultRandomizer(Class<T> type, int size) {
-        return null;
+    private Randomizer<?> createDefaultRandomizer(ColumnMetaData columnMetaData) {
+        return randomizerFactory.getRandomizer(columnMetaData);
     }
 
     private void validate(BuildInfo buildInfo) {
@@ -83,11 +89,11 @@ public class JdbcWriter {
                         "expected column type: [%s]", columnName, jdbcType.getName()));
             }
         } else {
-            backupCommonValidation(randomizer, jdbcType, columnName);
+            fallbackCommonValidation(randomizer, jdbcType, columnName);
         }
     }
 
-    private void backupCommonValidation(Randomizer<?> randomizer, Class<?> jdbcType, String columnName) {
+    private void fallbackCommonValidation(Randomizer<?> randomizer, Class<?> jdbcType, String columnName) {
         Class<?> clazz = randomizer.getClass();
         while (clazz != null) {
             // only check generic interfaces, otherwise you should
@@ -136,9 +142,10 @@ public class JdbcWriter {
         });
         columnSql.setLength(columnSql.length() - 2);
         placeholderSql.setLength(placeholderSql.length() - 2);
-        String sql = "INSERT INTO " + tableName + "(" + columnSql + ")\n" +
-                "VALUES (" + placeholderSql + ");";
-        log.info("Auto generate sql: " + sql);
+        String sql = "INSERT INTO " + tableName + "(" + columnSql + ") VALUES (" + placeholderSql + ");";
+        if (log.isInfoEnabled()) {
+            log.info("Auto generate sql: " + sql);
+        }
 
         Connection stub = null;
         try (Connection connection = ConnectionFactory.getInstance().createConnection();
@@ -168,8 +175,10 @@ public class JdbcWriter {
                 }
                 statement.addBatch();
             }
-            int affect = statement.executeBatch().length;
-            log.info("Totally insert " + affect + " rows");
+            int affected = statement.executeBatch().length;
+            if (log.isInfoEnabled()) {
+                log.info("Totally insert " + affected + " rows");
+            }
         } catch (SQLException e) {
             if (stub != null) {
                 try {
