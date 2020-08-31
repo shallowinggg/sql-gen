@@ -1,5 +1,6 @@
 package io.github.shallowinggg.sqlgen.config;
 
+import io.github.shallowinggg.sqlgen.random.Randomizer;
 import io.github.shallowinggg.sqlgen.restriction.ColumnRestriction;
 
 /**
@@ -9,6 +10,8 @@ public class ColumnConfig {
 
     private String name;
 
+    private Randomizer<?> randomizer;
+
     private ColumnRestriction restriction;
 
     public String getName() {
@@ -17,6 +20,14 @@ public class ColumnConfig {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public Randomizer<?> getRandomizer() {
+        return randomizer;
+    }
+
+    public void setRandomizer(Randomizer<?> randomizer) {
+        this.randomizer = randomizer;
     }
 
     public ColumnRestriction getRestriction() {

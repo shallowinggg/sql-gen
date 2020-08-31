@@ -4,7 +4,7 @@ import io.github.shallowinggg.sqlgen.jdbc.ColumnMetaData;
 
 /**
  * Factory interface for {@link Randomizer} instances.
- * Allows for caching a Limit per original resource.
+ * Allows for caching a Randomizer per type.
  *
  * @author ding shimin
  * @since 1.0
