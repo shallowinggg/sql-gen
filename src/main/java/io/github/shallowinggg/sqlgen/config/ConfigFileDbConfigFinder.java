@@ -9,7 +9,7 @@ import io.github.shallowinggg.sqlgen.env.YamlPropertySourceLoader;
 import io.github.shallowinggg.sqlgen.io.FileSystemResource;
 import io.github.shallowinggg.sqlgen.io.Resource;
 import io.github.shallowinggg.sqlgen.io.ResourceLoader;
-import io.github.shallowinggg.sqlgen.io.support.FactoriesLoader;
+import io.github.shallowinggg.sqlgen.util.Assert;
 import io.github.shallowinggg.sqlgen.util.CollectionUtils;
 import io.github.shallowinggg.sqlgen.util.StringUtils;
 import org.apache.commons.logging.Log;
@@ -20,9 +20,11 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -47,21 +49,31 @@ public class ConfigFileDbConfigFinder implements DbConfigFinder {
 
     private static final Comparator<File> FILE_COMPARATOR = Comparator.comparing(File::getAbsolutePath);
 
-    private final List<PropertySourceLoader> propertySourceLoaders = Arrays.asList(new PropertiesPropertySourceLoader(),
-            new YamlPropertySourceLoader());
+    private final List<PropertySourceLoader> propertySourceLoaders;
 
     private final Map<DocumentsCacheKey, List<PropertySource<?>>> loadDocumentsCache = new HashMap<>();
+
+    private final Deque<DbPropertiesFinder> dbPropertiesFinders;
 
     private ResourceLoader resourceLoader;
 
     private Environment environment;
+
+    public ConfigFileDbConfigFinder() {
+        this.dbPropertiesFinders = new LinkedList<>();
+        dbPropertiesFinders.addFirst(new DefaultDbPropertiesFinder());
+        dbPropertiesFinders.addFirst(new SpringBootDbPropertiesFinder());
+
+        this.propertySourceLoaders = Arrays.asList(new PropertiesPropertySourceLoader(),
+                new YamlPropertySourceLoader());
+    }
 
 
     @Override
     public DbConfig find(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
         this.resourceLoader = resourceLoader;
         this.environment = environment;
-        List<DbPropertiesFinder> dbPropertiesFinders = loadPropertiesFinders();
+        Deque<DbPropertiesFinder> dbPropertiesFinders = this.dbPropertiesFinders;
         for (DbPropertiesFinder finder : dbPropertiesFinders) {
             if (finder instanceof EnvironmentAware) {
                 ((EnvironmentAware) finder).setEnvironment(environment);
@@ -96,11 +108,6 @@ public class ConfigFileDbConfigFinder implements DbConfigFinder {
             return dbConfig;
         }
         return null;
-    }
-
-    private List<DbPropertiesFinder> loadPropertiesFinders() {
-        return FactoriesLoader.loadFactories(DbPropertiesFinder.class, getClass().getClassLoader()).
-                stream().filter(DbPropertiesFinder::isCandidate).collect(Collectors.toList());
     }
 
     private void load(DbPropertiesFinder finder, Consumer<PropertySource<?>> consumer) {
@@ -259,12 +266,22 @@ public class ConfigFileDbConfigFinder implements DbConfigFinder {
         return documents;
     }
 
-    private boolean isValid(DbConfigProperties properties) {
-        return StringUtils.hasText(properties.getUrlPropertyName()) &&
-                StringUtils.hasText(properties.getDriverNamePropertyName()) &&
-                StringUtils.hasText(properties.getUsernamePropertyName()) &&
-                StringUtils.hasText(properties.getPasswordPropertyName());
+    public void addDbPropertiesFinder(DbPropertiesFinder finder) {
+        Assert.notNull(finder, "finder must not be null");
+        if (DefaultDbPropertiesFinder.class.equals(finder.getClass()) ||
+                SpringBootDbPropertiesFinder.class.equals(finder.getClass())) {
+            return;
+        }
+        this.dbPropertiesFinders.addFirst(finder);
     }
+
+    public void addDbPropertiesFinders(List<DbPropertiesFinder> finders) {
+        Assert.notEmpty(finders, "finder must not be null");
+        for (DbPropertiesFinder finder : finders) {
+            addDbPropertiesFinder(finder);
+        }
+    }
+
 
     /**
      * Cache key used to save loading the same document multiple times.

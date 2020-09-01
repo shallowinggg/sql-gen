@@ -14,6 +14,11 @@ public class ColumnConfig {
 
     private ColumnRestriction restriction;
 
+    public ColumnConfig(String name, Randomizer<?> randomizer) {
+        this.name = name;
+        this.randomizer = randomizer;
+    }
+
     public String getName() {
         return name;
     }
