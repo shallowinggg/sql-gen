@@ -9,6 +9,7 @@ import io.github.shallowinggg.sqlgen.env.PropertySourceLoader;
 import io.github.shallowinggg.sqlgen.env.StandardEnvironment;
 import io.github.shallowinggg.sqlgen.env.YamlPropertySourceLoader;
 import io.github.shallowinggg.sqlgen.io.DefaultResourceLoader;
+import io.github.shallowinggg.sqlgen.io.FileSystemResource;
 import io.github.shallowinggg.sqlgen.io.Resource;
 import io.github.shallowinggg.sqlgen.io.ResourceLoader;
 import io.github.shallowinggg.sqlgen.util.CollectionUtils;
@@ -30,18 +31,30 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
+ * Abstract skeleton implementation for interface {@link DbConfigFinder}.
+ * It is coupled with SpringBoot profile implementation and thus sub class
+ * will be restricted, but it is available enough now. This class will be
+ * refactor in the future to solve this problem.
+ * <p>
+ * Sub class can only implement methods {@link #getSearchLocations()},
+ * {@link #getSearchNames()} to provide necessary information which used
+ * by this class. You can also extend methods {@link #initializeProfiles()},
+ * {@link #asDocuments(List)}, {@link #postProcessDocument(Document)} to
+ * get more customization.
+ *
  * @author ding shimin
  */
 public abstract class AbstractDbConfigFinder implements DbConfigFinder {
 
     protected final Log log = LogFactory.getLog(getClass());
-
-    private static final String WILDCARD = "*";
 
     private static final Set<String> NO_SEARCH_NAMES = Collections.singleton("");
 
@@ -53,18 +66,19 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
 
     private final Map<DocumentsCacheKey, List<Document>> loadDocumentsCache = new HashMap<>();
 
+    private Map<String, MutablePropertySources> loaded;
+
     protected Deque<String> profiles;
 
-    private List<String> processedProfiles;
-
-    private Map<String, MutablePropertySources> loaded;
+    protected List<String> processedProfiles;
 
     protected ConfigurableEnvironment environment;
 
     protected ResourceLoader resourceLoader;
 
     protected AbstractDbConfigFinder() {
-        this.propertySourceLoaders = Arrays.asList(new PropertiesPropertySourceLoader(),
+        this.propertySourceLoaders = Arrays.asList(
+                new PropertiesPropertySourceLoader(),
                 new YamlPropertySourceLoader());
     }
 
@@ -146,58 +160,87 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
 
     private void load(PropertySourceLoader loader, String location, String profile, DocumentFilter filter,
                       DocumentConsumer consumer) {
-        try {
-            Resource resource = this.resourceLoader.getResource(location);
-            if (resource == null || !resource.exists()) {
-                if (this.log.isTraceEnabled()) {
-                    StringBuilder description = getDescription("Skipped missing config ", location, resource,
-                            profile);
-                    this.log.trace(description);
+
+        Resource[] resources = getResources(location);
+        for (Resource resource : resources) {
+            try {
+                if (resource == null || !resource.exists()) {
+                    if (this.log.isTraceEnabled()) {
+                        StringBuilder description = getDescription("Skipped missing config ", location, resource,
+                                profile);
+                        this.log.trace(description);
+                    }
+                    return;
                 }
-                return;
-            }
-            if (!StringUtils.hasText(StringUtils.getFilenameExtension(resource.getFilename()))) {
-                if (this.log.isTraceEnabled()) {
-                    StringBuilder description = getDescription("Skipped empty config extension ", location,
-                            resource, profile);
-                    this.log.trace(description);
+                if (!StringUtils.hasText(StringUtils.getFilenameExtension(resource.getFilename()))) {
+                    if (this.log.isTraceEnabled()) {
+                        StringBuilder description = getDescription("Skipped empty config extension ", location,
+                                resource, profile);
+                        this.log.trace(description);
+                    }
+                    return;
                 }
-                return;
-            }
-            String name = "applicationConfig: [" + location + "]";
-            List<Document> documents = loadDocuments(loader, name, resource);
-            if (CollectionUtils.isEmpty(documents)) {
-                if (this.log.isTraceEnabled()) {
-                    StringBuilder description = getDescription("Skipped unloaded config ", location, resource,
-                            profile);
-                    this.log.trace(description);
+                String name = "applicationConfig: [" + location + "]";
+                List<Document> documents = loadDocuments(loader, name, resource);
+                if (CollectionUtils.isEmpty(documents)) {
+                    if (this.log.isTraceEnabled()) {
+                        StringBuilder description = getDescription("Skipped unloaded config ", location, resource,
+                                profile);
+                        this.log.trace(description);
+                    }
+                    return;
                 }
-                return;
-            }
-            List<Document> loaded = new ArrayList<>();
-            for (Document document : documents) {
-                if (filter.match(document)) {
-                    postProcessDocument(document);
-                    loaded.add(document);
+                List<Document> loaded = new ArrayList<>();
+                for (Document document : documents) {
+                    if (filter.match(document)) {
+                        postProcessDocument(document);
+                        loaded.add(document);
+                    }
                 }
-            }
-            Collections.reverse(loaded);
-            if (!loaded.isEmpty()) {
-                loaded.forEach((document) -> consumer.accept(profile, document));
-                if (this.log.isDebugEnabled()) {
-                    StringBuilder description = getDescription("Loaded config file ", location, resource, profile);
-                    this.log.debug(description);
+                Collections.reverse(loaded);
+                if (!loaded.isEmpty()) {
+                    loaded.forEach((document) -> consumer.accept(profile, document));
+                    if (this.log.isDebugEnabled()) {
+                        StringBuilder description = getDescription("Loaded config file ", location, resource, profile);
+                        this.log.debug(description);
+                    }
                 }
+            } catch (Exception ex) {
+                StringBuilder description = getDescription("Failed to load property source from ", location,
+                        resource, profile);
+                throw new IllegalStateException(description.toString(), ex);
             }
-        } catch (Exception ex) {
-            throw new IllegalStateException("Failed to load property " + "source from location '" + location + "'",
-                    ex);
         }
+    }
+
+    private Resource[] getResources(String location) {
+        try {
+            if (location.contains("*")) {
+                return getResourcesFromPatternLocation(location);
+            }
+            return new Resource[]{this.resourceLoader.getResource(location)};
+        } catch (Exception ex) {
+            return EMPTY_RESOURCES;
+        }
+    }
+
+    private Resource[] getResourcesFromPatternLocation(String location) throws IOException {
+        String directoryPath = location.substring(0, location.indexOf("*/"));
+        Resource resource = this.resourceLoader.getResource(directoryPath);
+        File[] files = resource.getFile().listFiles(File::isDirectory);
+        if (files != null) {
+            String fileName = location.substring(location.lastIndexOf('/') + 1);
+            Arrays.sort(files, FILE_COMPARATOR);
+            return Arrays.stream(files).map((file) -> file.listFiles((dir, name) -> name.equals(fileName)))
+                    .filter(Objects::nonNull).flatMap((Function<File[], Stream<File>>) Arrays::stream)
+                    .map(FileSystemResource::new).toArray(Resource[]::new);
+        }
+        return EMPTY_RESOURCES;
     }
 
     /**
      * Post process the given loaded {@code Document}.
-     * Sub class can customize this method.
+     * Sub class can apply additional processing as required.
      *
      * @param document the loaded {@code Document}
      */
@@ -205,7 +248,8 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
     }
 
     /**
-     * Initialize the profiles.
+     * Initialize the profiles. Sub class can add more profiles
+     * by extending this method.
      */
     protected void initializeProfiles() {
         // The default profile for these purposes is represented as null. We add it
@@ -265,11 +309,11 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
     private List<Document> loadDocuments(PropertySourceLoader loader, String name, Resource resource)
             throws IOException {
         DocumentsCacheKey cacheKey = new DocumentsCacheKey(loader, resource);
-        List<Document> documents = this.loadDocumentsCache.get(cacheKey);
+        List<Document> documents = loadDocumentsCache.get(cacheKey);
         if (documents == null) {
             List<PropertySource<?>> loaded = loader.load(name, resource);
             documents = asDocuments(loaded);
-            this.loadDocumentsCache.put(cacheKey, documents);
+            loadDocumentsCache.put(cacheKey, documents);
         }
         return documents;
     }
@@ -314,7 +358,7 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
     /**
      * A single document loaded by a {@link PropertySourceLoader}.
      */
-    private static class Document {
+    protected static class Document {
 
         private final PropertySource<?> propertySource;
 
@@ -410,6 +454,14 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
     @FunctionalInterface
     private interface DocumentFilter {
 
+        /**
+         * Determine if the given document meet the conditions supplied
+         * by this method. If meet, add it to the loaded collections;
+         * otherwise, this document will be ignored.
+         *
+         * @param document the document to determine
+         * @return {@code true} if the given document meet conditions
+         */
         boolean match(Document document);
 
     }
@@ -420,6 +472,13 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
     @FunctionalInterface
     private interface DocumentConsumer {
 
+        /**
+         * Handle the given loaded document and the profile
+         * which document belongs to.
+         *
+         * @param profile  profile which document belongs to
+         * @param document the loaded document
+         */
         void accept(String profile, Document document);
 
     }
