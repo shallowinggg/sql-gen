@@ -12,16 +12,19 @@ import io.github.shallowinggg.sqlgen.io.DefaultResourceLoader;
 import io.github.shallowinggg.sqlgen.io.FileSystemResource;
 import io.github.shallowinggg.sqlgen.io.Resource;
 import io.github.shallowinggg.sqlgen.io.ResourceLoader;
+import io.github.shallowinggg.sqlgen.util.Assert;
 import io.github.shallowinggg.sqlgen.util.CollectionUtils;
 import io.github.shallowinggg.sqlgen.util.ObjectUtils;
 import io.github.shallowinggg.sqlgen.util.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
@@ -64,6 +67,8 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
 
     private final List<PropertySourceLoader> propertySourceLoaders;
 
+    private final Map<String, DbPropertyConfig> dbPropertyConfigMap = new LinkedHashMap<>();
+
     private final Map<DocumentsCacheKey, List<Document>> loadDocumentsCache = new HashMap<>();
 
     private Map<String, MutablePropertySources> loaded;
@@ -83,14 +88,62 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
     }
 
     @Override
+    public void addDbPropertyConfig(DbPropertyConfig property) {
+        Assert.notNull(property, "property must not be null");
+        String name = property.name();
+        Assert.hasText(name, "property name must has text");
+        dbPropertyConfigMap.put(name, property);
+    }
+
+    @Nullable
+    @Override
+    public DbPropertyConfig getDbPropertyConfig(String name) {
+        Assert.hasText(name, "name must has text");
+        return dbPropertyConfigMap.get(name);
+    }
+
+    @Override
+    public List<DbPropertyConfig> getAllDbPropertyConfigs() {
+        Collection<DbPropertyConfig> propertyConfigs = dbPropertyConfigMap.values();
+        if (CollectionUtils.isNotEmpty(propertyConfigs)) {
+            return Collections.unmodifiableList(new ArrayList<>(propertyConfigs));
+        }
+        return Collections.emptyList();
+    }
+
+    @Override
+    @Nullable
     public DbConfig find(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
         this.environment = environment != null ? environment : new StandardEnvironment();
         this.resourceLoader = resourceLoader != null ? resourceLoader : new DefaultResourceLoader();
-        load();
+
+        loadConfigs();
+        List<DbPropertyConfig> candidates = getAllDbPropertyConfigs()
+                .stream()
+                .filter(DbPropertyConfig::isCandidate)
+                .collect(Collectors.toList());
+        for (DbPropertyConfig properties : candidates) {
+            DbConfig dbConfig = resolve(properties);
+            if (dbConfig != null) {
+                return dbConfig;
+            }
+        }
         return null;
     }
 
-    private void load() {
+    private DbConfig resolve(DbPropertyConfig config) {
+        DbConfig dbConfig = new DbConfig(environment.getProperty(config.getUrlPropertyName()),
+                environment.getProperty(config.getDriverNamePropertyName()),
+                environment.getProperty(config.getUsernamePropertyName()),
+                environment.getProperty(config.getPasswordPropertyName()));
+
+        if (dbConfig.isValid()) {
+            return dbConfig;
+        }
+        return null;
+    }
+
+    private void loadConfigs() {
         this.profiles = new LinkedList<>();
         this.processedProfiles = new LinkedList<>();
         this.loaded = new LinkedHashMap<>();

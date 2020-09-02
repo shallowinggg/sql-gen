@@ -3,19 +3,110 @@ package io.github.shallowinggg.sqlgen.config;
 import io.github.shallowinggg.sqlgen.env.ConfigurableEnvironment;
 import io.github.shallowinggg.sqlgen.io.ResourceLoader;
 
+import javax.annotation.Nullable;
+import java.util.List;
+
 /**
  * Interface that used to find {@link DbConfig}.
+ * <p>
+ * Implementations must provide necessary {@code DbPropertyConfig}s
+ * which used to search {@code DbConfig} by {@code ConfigurableEnvironment}.
  *
  * @author ding shimin
+ * @see SpringBootDbConfigFinder
+ * @see DefaultDbConfigFinder
+ * @since 1.0
  */
-@FunctionalInterface
 public interface DbConfigFinder {
 
     /**
-     * Post-process the given {@code environment}.
+     * Find {@code DbConfig} with the given {@code environment} and
+     * {@code resourceLoader}.
      *
-     * @param environment    the environment to post-process
-     * @param resourceLoader the resource loader that application use
+     * @param environment    the environment to use
+     * @param resourceLoader the resource loader to use
+     * @return {@code DbConfig} instance if find
      */
+    @Nullable
     DbConfig find(ConfigurableEnvironment environment, ResourceLoader resourceLoader);
+
+    /**
+     * Add a new {@code DbPropertyConfig}. If the given
+     * {@code DbPropertyConfig} is exist (determine by
+     * {@link DbPropertyConfig#name()}), the old config will
+     * be replaced by the new one.
+     *
+     * @param property the {@code DbPropertyConfig} to be added
+     */
+    void addDbPropertyConfig(DbPropertyConfig property);
+
+    /**
+     * Find a {@code DbPropertyConfig} by its name.
+     *
+     * @param name the name of {@code DbPropertyConfig}
+     * @return {@code DbPropertyConfig} instance if exist
+     */
+    @Nullable
+    DbPropertyConfig getDbPropertyConfig(String name);
+
+    /**
+     * Find all {@code DbPropertyConfig} instances. If none,
+     * return an empty list.
+     *
+     * @return all {@code DbPropertyConfig} instances
+     */
+    List<DbPropertyConfig> getAllDbPropertyConfigs();
+
+
+    /**
+     * DataSource property configuration
+     */
+    interface DbPropertyConfig {
+
+        /**
+         * Determine whether this config is a candidate. This method is mainly
+         * used to optimize if this config won't be used in current environment.
+         * For example, {@code C3p0DbPropertyConfig} will return false if
+         * C3p0 is not in classpath.
+         *
+         * @return {@code true} if this config will be used in current environment,
+         * or {@code false} otherwise.
+         */
+        boolean isCandidate();
+
+        /**
+         * The unique identifier for this config.
+         *
+         * @return the unique identifier
+         */
+        String name();
+
+        /**
+         * The name of datasource property url.
+         *
+         * @return name of datasource property url
+         */
+        String getUrlPropertyName();
+
+        /**
+         * The name of datasource property driver name.
+         *
+         * @return name of datasource property driver name.
+         */
+        String getDriverNamePropertyName();
+
+        /**
+         * The name of datasource property username.
+         *
+         * @return name of datasource property username
+         */
+        String getUsernamePropertyName();
+
+        /**
+         * The name of datasource property password.
+         *
+         * @return name of datasource property password
+         */
+        String getPasswordPropertyName();
+    }
 }

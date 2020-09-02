@@ -2,10 +2,12 @@ package io.github.shallowinggg.sqlgen.config;
 
 import io.github.shallowinggg.sqlgen.env.PropertySource;
 import io.github.shallowinggg.sqlgen.util.Assert;
+import io.github.shallowinggg.sqlgen.util.ClassUtils;
 import io.github.shallowinggg.sqlgen.util.ObjectUtils;
 import io.github.shallowinggg.sqlgen.util.ResourceUtils;
 import io.github.shallowinggg.sqlgen.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -15,7 +17,46 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
+ * Default SpringBoot db config finder implementation for interface {@link DbConfigFinder}.
+ * This implementation follow SpringBoot default convention:
+ * <p>
+ * config file name: application.
+ * <p>
+ * config file location:
+ * <lo>
+ * <li>classpath:/</li>
+ * <li>classpath:/config/</li>
+ * <li>file:./</li>
+ * <li>file:./config/</li>
+ * <lo/>
+ * <p>
+ * Also, you can use system property like "spring.config.location" and "spring.config.name" to
+ * override this default configuration.
+ * <p>
+ * Otherwise, you can specify profiles like what you do in plain springboot project. And this
+ * profiles will only be used to find config files.
+ * <p>
+ * This implementation provide six different common datasource config default:
+ * <lo>
+ * <li>spring base</li>
+ * <li>hikari</li>
+ * <li>dbcp2</li>
+ * <li>tomcat</li>
+ * <li>druid</li>
+ * <li>c3p0</li>
+ * </lo>
+ * <p>
+ * If you want to customize your own db properties configuration, you can extend this class and
+ * implement {@link #extendDbPropertyConfigs()} method to add more.
+ *
  * @author ding shimin
+ * @see BaseDbPropertyConfig
+ * @see HikariDbPropertyConfig
+ * @see Dbcp2DbPropertyConfig
+ * @see TomcatDbPropertyConfig
+ * @see DruidDbPropertyConfig
+ * @see C3p0DbPropertyConfig
+ * @since 1.0
  */
 public class SpringBootDbConfigFinder extends AbstractDbConfigFinder {
 
@@ -69,6 +110,17 @@ public class SpringBootDbConfigFinder extends AbstractDbConfigFinder {
 
     private Set<String> defaultProfiles = Collections.emptySet();
 
+    public SpringBootDbConfigFinder() {
+        List<DbPropertyConfig> propertyConfigs = new ArrayList<>();
+        propertyConfigs.add(new BaseDbPropertyConfig());
+        propertyConfigs.add(new HikariDbPropertyConfig());
+        propertyConfigs.add(new TomcatDbPropertyConfig());
+        propertyConfigs.add(new Dbcp2DbPropertyConfig());
+        propertyConfigs.add(new DruidDbPropertyConfig());
+        propertyConfigs.add(new C3p0DbPropertyConfig());
+        propertyConfigs.addAll(extendDbPropertyConfigs());
+        propertyConfigs.forEach(this::addDbPropertyConfig);
+    }
 
     @Override
     protected void initializeProfiles() {
@@ -243,5 +295,231 @@ public class SpringBootDbConfigFinder extends AbstractDbConfigFinder {
     public void setSearchNames(String names) {
         Assert.hasLength(names, "Names must not be empty");
         this.searchNames = names;
+    }
+
+    /**
+     * Sub class can implement this method to add custom {@link DbPropertyConfig}s
+     * and thus take advantage of this class.
+     *
+     * @return custom {@code DbPropertyConfig} list
+     */
+    protected List<DbPropertyConfig> extendDbPropertyConfigs() {
+        return Collections.emptyList();
+    }
+
+    /**
+     * Base spring boot datasource config
+     */
+    private static class BaseDbPropertyConfig implements DbPropertyConfig {
+
+        @Override
+        public String name() {
+            return "springboot-default";
+        }
+
+        @Override
+        public boolean isCandidate() {
+            return true;
+        }
+
+        @Override
+        public String getUrlPropertyName() {
+            return "spring.datasource.url";
+        }
+
+        @Override
+        public String getDriverNamePropertyName() {
+            return "spring.datasource.driver-class-name";
+        }
+
+        @Override
+        public String getUsernamePropertyName() {
+            return "spring.datasource.username";
+        }
+
+        @Override
+        public String getPasswordPropertyName() {
+            return "spring.datasource.password";
+        }
+    }
+
+    /**
+     * hikari datasource config
+     */
+    private static class HikariDbPropertyConfig implements DbPropertyConfig {
+
+        @Override
+        public String name() {
+            return "springboot-hikari";
+        }
+
+        @Override
+        public boolean isCandidate() {
+            return ClassUtils.isPresent("com.zaxxer.hikari.HikariDataSource", null);
+        }
+
+        @Override
+        public String getUrlPropertyName() {
+            return "spring.datasource.hikari.jdbc-url";
+        }
+
+        @Override
+        public String getDriverNamePropertyName() {
+            return "spring.datasource.hikari.driver-class-name";
+        }
+
+        @Override
+        public String getUsernamePropertyName() {
+            return "spring.datasource.hikari.username";
+        }
+
+        @Override
+        public String getPasswordPropertyName() {
+            return "spring.datasource.hikari.password";
+        }
+    }
+
+    /**
+     * dbcp2 datasource config
+     */
+    private static class Dbcp2DbPropertyConfig implements DbPropertyConfig {
+
+        @Override
+        public String name() {
+            return "springboot-dbcp2";
+        }
+
+        @Override
+        public boolean isCandidate() {
+            return ClassUtils.isPresent("org.apache.commons.dbcp2.BasicDataSource", null);
+        }
+
+        @Override
+        public String getUrlPropertyName() {
+            return "spring.datasource.dbcp2.url";
+        }
+
+        @Override
+        public String getDriverNamePropertyName() {
+            return "spring.datasource.dbcp2.driver-class-name";
+        }
+
+        @Override
+        public String getUsernamePropertyName() {
+            return "spring.datasource.dbcp2.username";
+        }
+
+        @Override
+        public String getPasswordPropertyName() {
+            return "spring.datasource.dbcp2.password";
+        }
+    }
+
+    /**
+     * tomcat datasource config
+     */
+    private static class TomcatDbPropertyConfig implements DbPropertyConfig {
+
+        @Override
+        public String name() {
+            return "springboot-tomcat";
+        }
+
+        @Override
+        public boolean isCandidate() {
+            return ClassUtils.isPresent("org.apache.tomcat.jdbc.pool.DataSource", null);
+        }
+
+        @Override
+        public String getUrlPropertyName() {
+            return "spring.datasource.tomcat.url";
+        }
+
+        @Override
+        public String getDriverNamePropertyName() {
+            return "spring.datasource.tomcat.driver-class-name";
+        }
+
+        @Override
+        public String getUsernamePropertyName() {
+            return "spring.datasource.tomcat.username";
+        }
+
+        @Override
+        public String getPasswordPropertyName() {
+            return "spring.datasource.tomcat.password";
+        }
+    }
+
+    /**
+     * druid datasource config
+     */
+    private static class DruidDbPropertyConfig implements DbPropertyConfig {
+
+        @Override
+        public String name() {
+            return "springboot-druid";
+        }
+
+        @Override
+        public boolean isCandidate() {
+            return ClassUtils.isPresent("com.alibaba.druid.pool.DruidDataSource", null);
+        }
+
+        @Override
+        public String getUrlPropertyName() {
+            return "spring.datasource.druid.url";
+        }
+
+        @Override
+        public String getDriverNamePropertyName() {
+            return "spring.datasource.druid.driverClassName";
+        }
+
+        @Override
+        public String getUsernamePropertyName() {
+            return "spring.datasource.druid.username";
+        }
+
+        @Override
+        public String getPasswordPropertyName() {
+            return "spring.datasource.druid.password";
+        }
+    }
+
+    /**
+     * c3p0 datasource config
+     */
+    private static class C3p0DbPropertyConfig implements DbPropertyConfig {
+
+        @Override
+        public String name() {
+            return "springboot-c3p0";
+        }
+
+        @Override
+        public boolean isCandidate() {
+            return ClassUtils.isPresent("com.mchange.v2.c3p0.ComboPooledDataSource", null);
+        }
+
+        @Override
+        public String getUrlPropertyName() {
+            return "c3p0.url";
+        }
+
+        @Override
+        public String getDriverNamePropertyName() {
+            return "c3p0.driverClass";
+        }
+
+        @Override
+        public String getUsernamePropertyName() {
+            return "c3p0.user";
+        }
+
+        @Override
+        public String getPasswordPropertyName() {
+            return "c3p0.password";
+        }
     }
 }
