@@ -52,6 +52,15 @@ import java.util.stream.Stream;
  * by this class. You can also extend methods {@link #initializeProfiles()},
  * {@link #asDocuments(List)}, {@link #postProcessDocument(Document)} to
  * get more customization.
+ * <p>
+ * If you use env-related config like [dev, test, ...], you can active
+ * environment you want with following ways:
+ * <lo>
+ * <li>extend method {@link #initializeProfiles()}</li>
+ * <li>{@link ConfigurableEnvironment#setActiveProfiles(String...)}</li>
+ * <li>{@link ConfigurableEnvironment#setDefaultProfiles(String...)}</li>
+ * <li>extend method {@link #postProcessDocument(Document)}</li>
+ * </lo>
  *
  * @author ding shimin
  */
@@ -308,6 +317,12 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
         // The default profile for these purposes is represented as null. We add it
         // first so that it is processed first and has lowest priority.
         this.profiles.add(null);
+        this.profiles.addAll(Arrays.stream(environment.getActiveProfiles())
+                .collect(Collectors.toList()));
+        if (this.profiles.size() == 1) {
+            this.profiles.addAll(Arrays.stream(environment.getDefaultProfiles())
+                    .collect(Collectors.toList()));
+        }
     }
 
     private DocumentFilter getPositiveProfileFilter(String profile) {
