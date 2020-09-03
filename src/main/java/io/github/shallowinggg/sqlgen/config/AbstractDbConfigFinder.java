@@ -163,6 +163,7 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
             this.processedProfiles.add(profile);
         }
         load(null, this::getNegativeProfileFilter, addToLoaded(MutablePropertySources::addLast, true));
+        addLoadedPropertySources();
     }
 
     private void load(String profile, DocumentFilterFactory filterFactory, DocumentConsumer consumer) {
@@ -421,6 +422,31 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
             result.append(profile);
         }
         return result;
+    }
+
+    private void addLoadedPropertySources() {
+        MutablePropertySources destination = this.environment.getPropertySources();
+        List<MutablePropertySources> loaded = new ArrayList<>(this.loaded.values());
+        Collections.reverse(loaded);
+        String lastAdded = null;
+        Set<String> added = new HashSet<>();
+        for (MutablePropertySources sources : loaded) {
+            for (PropertySource<?> source : sources) {
+                if (added.add(source.getName())) {
+                    addLoadedPropertySource(destination, lastAdded, source);
+                    lastAdded = source.getName();
+                }
+            }
+        }
+    }
+
+    private void addLoadedPropertySource(MutablePropertySources destination, String lastAdded,
+                                         PropertySource<?> source) {
+        if (lastAdded == null) {
+            destination.addLast(source);
+        } else {
+            destination.addAfter(lastAdded, source);
+        }
     }
 
     /**

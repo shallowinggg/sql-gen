@@ -9,6 +9,7 @@ import java.util.Map;
 public abstract class NumberUtils {
 
     private static final Map<Integer, Integer> INT_10X = new HashMap<>();
+
     private static final Map<Integer, Long> LONG_10X = new HashMap<>();
 
     static {

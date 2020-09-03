@@ -2,7 +2,7 @@ package io.github.shallowinggg.sqlgen;
 
 import io.github.shallowinggg.sqlgen.config.ColumnConfig;
 import io.github.shallowinggg.sqlgen.config.DbConfig;
-import io.github.shallowinggg.sqlgen.config.DbPropertiesFinder;
+import io.github.shallowinggg.sqlgen.config.DbConfigFinder;
 import io.github.shallowinggg.sqlgen.env.ConfigurableEnvironment;
 import io.github.shallowinggg.sqlgen.io.ResourceLoader;
 import io.github.shallowinggg.sqlgen.random.Randomizer;
@@ -28,7 +28,7 @@ public class SqlGenApplicationBuilder {
 
     private List<ColumnConfig> columnConfigs;
 
-    private List<DbPropertiesFinder> dbPropertiesFinders;
+    private List<DbConfigFinder> dbConfigFinders;
 
 
     public SqlGenApplicationBuilder resourceLoader(ResourceLoader resourceLoader) {
@@ -61,12 +61,12 @@ public class SqlGenApplicationBuilder {
         return this;
     }
 
-    public SqlGenApplicationBuilder addDbPropertiesFinder(DbPropertiesFinder finder) {
+    public SqlGenApplicationBuilder addDbConfigFinder(DbConfigFinder finder) {
         Assert.notNull(finder, "finder must not be null");
-        List<DbPropertiesFinder> finders = this.dbPropertiesFinders;
+        List<DbConfigFinder> finders = this.dbConfigFinders;
         if (finders == null) {
             finders = new ArrayList<>(5);
-            this.dbPropertiesFinders = finders;
+            this.dbConfigFinders = finders;
         }
         finders.add(finder);
         return this;

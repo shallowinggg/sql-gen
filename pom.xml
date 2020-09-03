@@ -10,7 +10,7 @@
 
     <name>sql-gen</name>
     <url>http://www.example.com</url>
-    <packaging>pom</packaging>
+    <packaging>jar</packaging>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -18,37 +18,40 @@
         <maven.compiler.target>1.8</maven.compiler.target>
 
         <junit.version>4.12</junit.version>
+        <jsr305.version>3.0.2</jsr305.version>
+        <commons.logging.version>1.2</commons.logging.version>
+        <snakeyaml.version>1.26</snakeyaml.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <version>${jsr305.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>${commons.logging.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>${snakeyaml.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>5.1.42</version>
+            <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-            <version>3.0.2</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-            <version>1.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.yaml</groupId>
-            <artifactId>snakeyaml</artifactId>
-            <version>1.26</version>
-        </dependency>
-
 
     </dependencies>
 
@@ -58,6 +61,7 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
         </plugins>
+
         <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
             <plugins>
                 <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
@@ -69,6 +73,36 @@
                 <plugin>
                     <artifactId>maven-resources-plugin</artifactId>
                     <version>3.0.2</version>
+                    <configuration>
+                        <encoding>${project.build.sourceEncoding}</encoding>
+                        <resources>
+                            <resource>
+                                <directory>src/main/resources</directory>
+                                <includes>
+                                    <include>**/*.*</include>
+                                </includes>
+                            </resource>
+                            <resource>
+                                <directory>src/test/resources</directory>
+                                <includes>
+                                    <include>**/*.*</include>
+                                </includes>
+                            </resource>
+                        </resources>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.0.1</version>
+                    <executions>
+                        <execution>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>jar-no-fork</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
@@ -112,7 +146,7 @@
                             <phase>validate</phase>
                             <configuration>
                                 <configLocation>
-                                    nacre-checkstyle/checkstyle.xml
+                                    google-check/checkstyle.xml
                                 </configLocation>
                                 <failOnViolation>true</failOnViolation>
                                 <includeResources>false</includeResources>
