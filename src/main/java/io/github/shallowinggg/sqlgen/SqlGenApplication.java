@@ -8,7 +8,7 @@ import io.github.shallowinggg.sqlgen.config.SpringBootDbConfigFinder;
 import io.github.shallowinggg.sqlgen.env.ConfigurableEnvironment;
 import io.github.shallowinggg.sqlgen.io.ResourceLoader;
 import io.github.shallowinggg.sqlgen.jdbc.BatchJdbcWriter;
-import io.github.shallowinggg.sqlgen.jdbc.JdbcWriter;
+import io.github.shallowinggg.sqlgen.jdbc.AbstractJdbcWriter;
 import io.github.shallowinggg.sqlgen.jdbc.support.ConnectionFactory;
 
 import java.util.ArrayList;
@@ -39,7 +39,7 @@ public class SqlGenApplication {
         DbConfig dbConfig = getOrFindDbConfig();
 
         ConnectionFactory.init(dbConfig);
-        JdbcWriter jdbcWriter = new BatchJdbcWriter();
+        AbstractJdbcWriter jdbcWriter = new BatchJdbcWriter();
 
     }
 
@@ -50,7 +50,7 @@ public class SqlGenApplication {
             finders.add(new SpringBootDbConfigFinder());
             finders.add(new DefaultDbConfigFinder());
             for (DbConfigFinder finder : finders) {
-                DbConfig result = finder.find(environment, resourceLoader);
+                DbConfig result = finder.find();
                 if (result != null) {
                     return result;
                 }

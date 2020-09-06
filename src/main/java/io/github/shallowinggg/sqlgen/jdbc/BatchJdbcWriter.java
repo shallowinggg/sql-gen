@@ -13,12 +13,13 @@ import java.util.List;
 /**
  * @author ding shimin
  */
-public class BatchJdbcWriter extends JdbcWriter {
+public class BatchJdbcWriter extends AbstractJdbcWriter {
 
     private int batchSize;
 
     @Override
-    protected int insert(String sql, int rows, List<BuildInfo> buildInfos) {
+    protected int doInsert(String table, int rows, List<BuildInfo> buildInfos) {
+        String sql = buildSql(table, buildInfos);
         Connection stub = null;
         try (Connection connection = ConnectionFactory.getInstance().createConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {

@@ -1,8 +1,5 @@
 package io.github.shallowinggg.sqlgen.config;
 
-import io.github.shallowinggg.sqlgen.env.ConfigurableEnvironment;
-import io.github.shallowinggg.sqlgen.io.ResourceLoader;
-
 import javax.annotation.Nullable;
 import java.util.List;
 
@@ -23,22 +20,10 @@ public interface DbConfigFinder {
      * Find {@code DbConfig} with the given {@code environment} and
      * {@code resourceLoader}.
      *
-     * @param environment    the environment to use
-     * @param resourceLoader the resource loader to use
      * @return {@code DbConfig} instance if find
      */
     @Nullable
-    DbConfig find(ConfigurableEnvironment environment, ResourceLoader resourceLoader);
-
-    /**
-     * Add a new {@code DbPropertyConfig}. If the given
-     * {@code DbPropertyConfig} is exist (determine by
-     * {@link DbPropertyConfig#name()}), the old config will
-     * be replaced by the new one.
-     *
-     * @param property the {@code DbPropertyConfig} to be added
-     */
-    void addDbPropertyConfig(DbPropertyConfig property);
+    DbConfig find();
 
     /**
      * Find a {@code DbPropertyConfig} by its name.

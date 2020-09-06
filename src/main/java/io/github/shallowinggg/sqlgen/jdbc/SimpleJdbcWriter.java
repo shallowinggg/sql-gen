@@ -12,10 +12,11 @@ import java.util.List;
 /**
  * @author ding shimin
  */
-public class SimpleJdbcWriter extends JdbcWriter {
+public class SimpleJdbcWriter extends AbstractJdbcWriter {
 
     @Override
-    protected int insert(String sql, int rows, List<BuildInfo> buildInfos) throws SQLException {
+    protected int doInsert(String table, int rows, List<BuildInfo> buildInfos) throws SQLException {
+        String sql = buildSql(table, buildInfos);
         try (Connection connection = ConnectionFactory.getInstance().createConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
 

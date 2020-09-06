@@ -1,8 +1,6 @@
 package io.github.shallowinggg.sqlgen.config;
 
 import io.github.shallowinggg.sqlgen.env.PropertySource;
-import io.github.shallowinggg.sqlgen.env.StandardEnvironment;
-import io.github.shallowinggg.sqlgen.io.DefaultResourceLoader;
 import io.github.shallowinggg.sqlgen.util.CollectionUtils;
 import io.github.shallowinggg.sqlgen.util.ObjectUtils;
 import io.github.shallowinggg.sqlgen.util.StringUtils;
@@ -24,7 +22,7 @@ public class AbstractDbConfigFinderTest {
     @Test
     public void profileDbConfigFinder() {
         DbConfigFinder dbConfigFinder = new ProfileDbConfigFinder();
-        DbConfig dbConfig = dbConfigFinder.find(new StandardEnvironment(), new DefaultResourceLoader());
+        DbConfig dbConfig = dbConfigFinder.find();
         Assert.assertNotNull(dbConfig);
         Assert.assertEquals("jdbc:mysql://localhost:3306/test", dbConfig.getUrl());
         Assert.assertEquals("com.mysql.jdbc.Driver", dbConfig.getDriverName());

@@ -64,7 +64,7 @@ import java.util.stream.Stream;
  *
  * @author ding shimin
  */
-public abstract class AbstractDbConfigFinder implements DbConfigFinder {
+public abstract class AbstractDbConfigFinder implements ConfigurableDbConfigFinder {
 
     protected final Log log = LogFactory.getLog(getClass());
 
@@ -86,14 +86,65 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
 
     protected List<String> processedProfiles;
 
-    protected ConfigurableEnvironment environment;
+    protected volatile ConfigurableEnvironment environment;
 
-    protected ResourceLoader resourceLoader;
+    protected volatile ResourceLoader resourceLoader;
 
     protected AbstractDbConfigFinder() {
+        // TODO: move to interface for configuration
         this.propertySourceLoaders = Arrays.asList(
                 new PropertiesPropertySourceLoader(),
                 new YamlPropertySourceLoader());
+    }
+
+    @Override
+    public void setEnvironment(ConfigurableEnvironment environment) {
+        Assert.notNull(environment, "environment must not be null");
+        this.environment = environment;
+    }
+
+    @Override
+    public ConfigurableEnvironment getEnvironment() {
+        ConfigurableEnvironment environment = this.environment;
+        if (environment == null) {
+            synchronized (this) {
+                environment = this.environment;
+                if (environment == null) {
+                    environment = new StandardEnvironment();
+                    this.environment = environment;
+                }
+            }
+        }
+        return environment;
+    }
+
+    @Override
+    public void setResourceLoader(ResourceLoader resourceLoader) {
+        Assert.notNull(resourceLoader, "resource loader must not be null");
+        this.resourceLoader = resourceLoader;
+    }
+
+    @Override
+    public ResourceLoader getResourceLoader() {
+        ResourceLoader rl = this.resourceLoader;
+        if (rl == null) {
+            synchronized (this) {
+                rl = this.resourceLoader;
+                if (rl == null) {
+                    rl = new DefaultResourceLoader();
+                    this.resourceLoader = rl;
+                }
+            }
+        }
+        return rl;
+    }
+
+    @Override
+    public void setDbPropertyConfigs(List<DbPropertyConfig> dbPropertyConfigs) {
+        Assert.notEmpty(dbPropertyConfigs, "dbPropertyConfigs must not be empty");
+        for (DbPropertyConfig config : dbPropertyConfigs) {
+            addDbPropertyConfig(config);
+        }
     }
 
     @Override
@@ -122,10 +173,7 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
 
     @Override
     @Nullable
-    public DbConfig find(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
-        this.environment = environment != null ? environment : new StandardEnvironment();
-        this.resourceLoader = resourceLoader != null ? resourceLoader : new DefaultResourceLoader();
-
+    public DbConfig find() {
         loadConfigs();
         List<DbPropertyConfig> candidates = getAllDbPropertyConfigs()
                 .stream()
@@ -141,6 +189,7 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
     }
 
     private DbConfig resolve(DbPropertyConfig config) {
+        ConfigurableEnvironment environment = getEnvironment();
         DbConfig dbConfig = new DbConfig(environment.getProperty(config.getUrlPropertyName()),
                 environment.getProperty(config.getDriverNamePropertyName()),
                 environment.getProperty(config.getUsernamePropertyName()),
@@ -281,7 +330,7 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
             if (location.contains("*")) {
                 return getResourcesFromPatternLocation(location);
             }
-            return new Resource[]{this.resourceLoader.getResource(location)};
+            return new Resource[]{getResourceLoader().getResource(location)};
         } catch (Exception ex) {
             return EMPTY_RESOURCES;
         }
@@ -289,7 +338,7 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
 
     private Resource[] getResourcesFromPatternLocation(String location) throws IOException {
         String directoryPath = location.substring(0, location.indexOf("*/"));
-        Resource resource = this.resourceLoader.getResource(directoryPath);
+        Resource resource = getResourceLoader().getResource(directoryPath);
         File[] files = resource.getFile().listFiles(File::isDirectory);
         if (files != null) {
             String fileName = location.substring(location.lastIndexOf('/') + 1);
@@ -318,6 +367,7 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
         // The default profile for these purposes is represented as null. We add it
         // first so that it is processed first and has lowest priority.
         this.profiles.add(null);
+        ConfigurableEnvironment environment = getEnvironment();
         this.profiles.addAll(Arrays.stream(environment.getActiveProfiles())
                 .collect(Collectors.toList()));
         if (this.profiles.size() == 1) {
@@ -332,13 +382,13 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
                 return ObjectUtils.isEmpty(document.getProfiles());
             }
             return ObjectUtils.containsElement(document.getProfiles(), profile)
-                    && this.environment.acceptsProfiles(Profiles.of(document.getProfiles()));
+                    && getEnvironment().acceptsProfiles(Profiles.of(document.getProfiles()));
         };
     }
 
     private DocumentFilter getNegativeProfileFilter(String profile) {
         return (Document document) -> (profile == null && !ObjectUtils.isEmpty(document.getProfiles())
-                && this.environment.acceptsProfiles(Profiles.of(document.getProfiles())));
+                && getEnvironment().acceptsProfiles(Profiles.of(document.getProfiles())));
     }
 
     /**
@@ -425,7 +475,7 @@ public abstract class AbstractDbConfigFinder implements DbConfigFinder {
     }
 
     private void addLoadedPropertySources() {
-        MutablePropertySources destination = this.environment.getPropertySources();
+        MutablePropertySources destination = getEnvironment().getPropertySources();
         List<MutablePropertySources> loaded = new ArrayList<>(this.loaded.values());
         Collections.reverse(loaded);
         String lastAdded = null;

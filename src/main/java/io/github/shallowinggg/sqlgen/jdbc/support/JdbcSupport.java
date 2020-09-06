@@ -23,6 +23,8 @@ public class JdbcSupport {
 
     private static final Set<Integer> SUPPORT_DEFAULT_TYPES;
 
+    private static volatile DatabaseMetaData databaseCache;
+
     static {
         SUPPORT_DEFAULT_TYPES = new HashSet<>();
 
@@ -56,17 +58,47 @@ public class JdbcSupport {
      * @see Connection#getMetaData()
      */
     public static DatabaseMetaData readDatabaseMetaData() {
-        ConnectionFactory connectionFactory = ConnectionFactory.getInstance();
-        Connection connection = null;
-        try {
-            connection = connectionFactory.createConnection();
-            return connection.getMetaData();
-        } catch (SQLException e) {
-            throw new JdbcException("Unexpected problem when read database metadata", e);
-        } finally {
-            if (connection != null) {
-                connectionFactory.recycle(connection);
+        DatabaseMetaData dmd = databaseCache;
+        if (dmd == null) {
+            synchronized (JdbcSupport.class) {
+                dmd = databaseCache;
+                if (dmd == null) {
+                    ConnectionFactory connectionFactory = ConnectionFactory.getInstance();
+                    Connection connection = null;
+                    try {
+                        connection = connectionFactory.createConnection();
+                        dmd = connection.getMetaData();
+                        databaseCache = dmd;
+                    } catch (SQLException e) {
+                        throw new JdbcException("Unexpected problem when read database metadata", e);
+                    } finally {
+                        if (connection != null) {
+                            connectionFactory.recycle(connection);
+                        }
+                    }
+                }
             }
+        }
+        return dmd;
+    }
+
+    /**
+     * Check if the given table exists with global connection.
+     * If there is a {@link SQLException SQLException} thrown,
+     * it will be wrapped as a {@link RuntimeException}.
+     *
+     * @param tableName the name of table to check
+     * @return {@code true} if the given table exists
+     */
+    public static boolean isTableExist(String tableName) {
+        Assert.hasText(tableName, "tableName must has text");
+
+        DatabaseMetaData databaseMetaData = readDatabaseMetaData();
+        try (ResultSet table = databaseMetaData.getTables(null, null, tableName, null)) {
+            return table.next();
+        } catch (SQLException e) {
+            throw new JdbcException(String.format("Unexpected problem when read table [%s] metadata",
+                    tableName), e);
         }
     }
 
